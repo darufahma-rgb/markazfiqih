@@ -210,7 +210,7 @@ function HeroSection({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="pt-4 sm:pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center mt-4 font-['Plus_Jakarta_Sans',sans-serif]"
+          className="pt-4 sm:pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center mb-2 sm:mb-4 font-['Plus_Jakarta_Sans',sans-serif]"
         >
           <p className="text-xs uppercase tracking-widest text-white/80 font-bold mb-1 font-['Plus_Jakarta_Sans',sans-serif]">
             Markaz Fiqih

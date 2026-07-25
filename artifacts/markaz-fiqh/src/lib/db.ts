@@ -1335,16 +1335,22 @@ export async function listAllInvoicesForAdmin(options?: boolean | { forceRefresh
 
   const fetchSupabaseData = async () => {
     try {
-      const [invRes, notifRes] = await Promise.all([
+      const [invRes, notifRes, classesRes] = await Promise.all([
         supabase.from('invoices').select(`
           id, user_id, total_amount, status, mayar_invoice_id, created_at, paid_at,
           invoice_items ( id, class_id, bundle_id, price, classes ( title ), bundles ( title ) )
         `).order('created_at', { ascending: false }),
         supabase.from('notifications').select('id, title, message, type, created_at').order('created_at', { ascending: false }),
+        // Fetch semua kelas untuk mapping harga → nama kelas
+        supabase.from('classes').select('title, base_price, discount_price').eq('status', 'published'),
       ]);
-      return { invoicesData: invRes.data || [], notifsData: notifRes.data || [] };
+      return {
+        invoicesData: invRes.data || [],
+        notifsData: notifRes.data || [],
+        classesData: classesRes.data || [],
+      };
     } catch {
-      return { invoicesData: [], notifsData: [] };
+      return { invoicesData: [], notifsData: [], classesData: [] };
     }
   };
 
@@ -1364,6 +1370,26 @@ export async function listAllInvoicesForAdmin(options?: boolean | { forceRefresh
       expired: 'failed',
     };
 
+    // Build price → class title map untuk resolusi nama kelas dari nominal invoice Mayar
+    // Map kedua harga (diskon DAN base) agar lebih banyak kecocokan
+    const { classesData } = supabaseResult;
+    const priceToClassTitle = new Map<number, string>();
+    for (const cls of classesData as any[]) {
+      // Prioritas: discount_price dulu, lalu base_price
+      const prices = [cls.discount_price, cls.base_price].filter(Boolean);
+      for (const price of prices) {
+        if (priceToClassTitle.has(price)) {
+          // Jika ada 2+ kelas dengan harga sama, gabungkan
+          const existing = priceToClassTitle.get(price)!;
+          if (!existing.includes(cls.title)) {
+            priceToClassTitle.set(price, `${existing} / ${cls.title}`);
+          }
+        } else {
+          priceToClassTitle.set(price, cls.title);
+        }
+      }
+    }
+
     for (const mayarList of mayarPagesResults) {
       for (const item of mayarList) {
         if (!item || fetchedIds.has(item.id)) continue;
@@ -1372,19 +1398,24 @@ export async function listAllInvoicesForAdmin(options?: boolean | { forceRefresh
         const status = statusMap[item.status?.toLowerCase()] || 'pending';
         const customerName = item.customer?.name || item.customer?.email || 'Pelanggan Mayar';
         const customerPhone = item.customer?.mobile || null;
-        const description = item.description || item.name || 'Invoice Mayar';
+        const rawDescription = item.description || item.name || 'Invoice Mayar';
+        const amount = item.amount || 0;
+
+        // Resolusi nama kelas: cocokkan nominal pembayaran dengan harga kelas
+        const matchedClassName = priceToClassTitle.get(amount);
+        const resolvedTitle = matchedClassName || rawDescription;
 
         result.push({
           id: item.id,
           userId: item.customerId || item.customer?.id || 'mayar-user',
           userNickname: customerName,
           userPhone: customerPhone,
-          totalAmount: item.amount || 0,
+          totalAmount: amount,
           status,
           mayarInvoiceId: item.id,
           createdAt: new Date(item.createdAt || Date.now()).toISOString(),
           paidAt: status === 'paid' ? new Date(item.createdAt || Date.now()).toISOString() : null,
-          items: [{ id: item.id, title: description, price: item.amount || 0 }],
+          items: [{ id: item.id, title: resolvedTitle, price: amount }],
         });
       }
     }
