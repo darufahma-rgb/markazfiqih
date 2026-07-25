@@ -1248,7 +1248,59 @@ export type AdminInvoiceItem = {
   items: { id: string; title: string; price: number }[];
 };
 
+const MAYAR_LIVE_TOKEN =
+  'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlM2UyNTEyYi04ZmUxLTRhZTMtYmM3ZC04YzdlYmIwZmY2N2MiLCJhY2NvdW50SWQiOiI1ODExNzgwMi1mY2Y2LTQyMjgtOTJlOC1iOTMyYzk5ZmJlZDEiLCJjcmVhdGVkQXQiOiIxNzg0MDQxNTQyOTgxIiwicm9sZSI6ImRldmVsb3BlciIsInNjb3BlIjp7InJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSwic3ViIjoiZmFxaWh1YmFpZGlsbGFocm96YW4yQGdtYWlsLmNvbSIsIm5hbWUiOiJNYXJrYXogRmlxaWgiLCJsaW5rIjoibWFya2F6ZmlxaWgtNjYwMzgiLCJpc1NlbGZEb21haW4iOm51bGwsImlhdCI6MTc4NDA0MTU0Mn0.TGkUtCz-1XK2w0jPnG0bLvT-mcFcCtmKgxC3GNyEcKbs5cITcOhmIM-PnLGZgkRc4vFufgcjyhewusf-f3bOmcjm-nbpKLQ6DRGyjJnBIMIXDIiN3pFQz_3ErUcQuFeKuo-JLmnxai8BvlHmbKz4hnIhEjmMmO9wpJ4_Pa8R2IAv5bGy1qxOhXkDWPAyXXR6N7QA6iGQxp8xZjlfZzjVHjsJLyuSJEvloEphmfNqtBw_MlNzBrh8oZFJVVXi_aKJiODn851K8Im9wmhqwsBBWyjiEEBdu4VeRjsYcR7UhYTSS38HEzvTGFX7HvyaOkTNRGfG63gHKXk-Tv_Iry2h4Q';
+
 export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
+  const result: AdminInvoiceItem[] = [];
+  const fetchedIds = new Set<string>();
+
+  // 1. Fetch live invoices directly from Mayar API
+  try {
+    const res = await fetch('https://api.mayar.id/hl/v1/invoice?pageSize=100', {
+      headers: {
+        Authorization: `Bearer ${MAYAR_LIVE_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const mayarList = json.data || [];
+      for (const item of mayarList) {
+        fetchedIds.add(item.id);
+        const statusMap: Record<string, 'pending' | 'paid' | 'failed'> = {
+          paid: 'paid',
+          closed: 'paid',
+          success: 'paid',
+          unpaid: 'pending',
+          failed: 'failed',
+          expired: 'failed',
+        };
+        const status = statusMap[item.status?.toLowerCase()] || 'pending';
+        const customerName = item.customer?.name || item.customer?.email || 'Pelanggan Mayar';
+        const customerPhone = item.customer?.mobile || null;
+        const description = item.description || item.name || 'Invoice Mayar';
+
+        result.push({
+          id: item.id,
+          userId: item.customerId || item.customer?.id || 'mayar-user',
+          userNickname: customerName,
+          userPhone: customerPhone,
+          totalAmount: item.amount || 0,
+          status,
+          mayarInvoiceId: item.id,
+          createdAt: new Date(item.createdAt || Date.now()).toISOString(),
+          paidAt: status === 'paid' ? new Date(item.createdAt || Date.now()).toISOString() : null,
+          items: [{ id: item.id, title: description, price: item.amount || 0 }],
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Live Mayar API fetch fallback:', err);
+  }
+
+  // 2. Query Supabase invoices table
   const { data: invoicesData } = await supabase
     .from('invoices')
     .select(`
@@ -1257,43 +1309,48 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
     `)
     .order('created_at', { ascending: false });
 
-  const { data: notifsData } = await supabase
-    .from('notifications')
-    .select('id, title, message, type, created_at')
-    .order('created_at', { ascending: false });
-
-  const existingInvoiceIds = new Set((invoicesData ?? []).map((inv: any) => inv.id));
   const userIds = Array.from(new Set((invoicesData ?? []).map((inv: any) => inv.user_id).filter(Boolean)));
-
   const { data: profiles } = userIds.length > 0
     ? await supabase.from('user_profiles').select('user_id, nickname, phone').in('user_id', userIds)
     : { data: [] };
 
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
 
-  const result: AdminInvoiceItem[] = (invoicesData ?? []).map((inv: any) => {
-    const profile = profileMap.get(inv.user_id);
-    return {
-      id: inv.id as string,
-      userId: inv.user_id as string,
-      userNickname: (profile?.nickname as string | null) ?? null,
-      userPhone: (profile?.phone as string | null) ?? null,
-      totalAmount: inv.total_amount as number,
-      status: inv.status as 'pending' | 'paid' | 'failed',
-      mayarInvoiceId: inv.mayar_invoice_id as string | null,
-      createdAt: inv.created_at as string,
-      paidAt: inv.paid_at as string | null,
-      items: (inv.invoice_items ?? []).map((item: any) => ({
-        id: item.id as string,
-        title: item.classes?.title ?? item.bundles?.title ?? '(tidak diketahui)',
-        price: item.price as number,
-      })),
-    };
-  });
+  if (invoicesData) {
+    for (const inv of invoicesData) {
+      if (!fetchedIds.has(inv.id)) {
+        fetchedIds.add(inv.id);
+        const profile = profileMap.get(inv.user_id);
+        result.push({
+          id: inv.id as string,
+          userId: inv.user_id as string,
+          userNickname: (profile?.nickname as string | null) ?? null,
+          userPhone: (profile?.phone as string | null) ?? null,
+          totalAmount: inv.total_amount as number,
+          status: inv.status as 'pending' | 'paid' | 'failed',
+          mayarInvoiceId: inv.mayar_invoice_id as string | null,
+          createdAt: inv.created_at as string,
+          paidAt: inv.paid_at as string | null,
+          items: (inv.invoice_items ?? []).map((item: any) => ({
+            id: item.id as string,
+            title: item.classes?.title ?? item.bundles?.title ?? '(tidak diketahui)',
+            price: item.price as number,
+          })),
+        });
+      }
+    }
+  }
+
+  // 3. Synthesize any notification transactions
+  const { data: notifsData } = await supabase
+    .from('notifications')
+    .select('id, title, message, type, created_at')
+    .order('created_at', { ascending: false });
 
   if (notifsData) {
     for (const n of notifsData) {
-      if ((n.type === 'order' || n.type === 'payment' || n.title?.toLowerCase().includes('pesanan') || n.title?.toLowerCase().includes('pembelian')) && !existingInvoiceIds.has(n.id)) {
+      if ((n.type === 'order' || n.type === 'payment' || n.title?.toLowerCase().includes('pesanan') || n.title?.toLowerCase().includes('pembelian')) && !fetchedIds.has(n.id)) {
+        fetchedIds.add(n.id);
         result.push({
           id: n.id,
           userId: 'system',

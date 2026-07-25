@@ -107,16 +107,15 @@ type TestimonialItem = {
 // SECTION 1: Hero — satu kolom, semua elemen center secara horizontal
 // ────────────────────────────────────────────────────────────────────────────
 function HeroSection({
-  socialLinks: _socialLinks,
-  totalClasses,
-  studentCountLabel,
+  totalClasses: _totalClasses,
+  studentCountLabel: _studentCountLabel,
 }: {
   socialLinks: Array<{ label: string; icon: typeof Instagram | typeof TikTokIcon; href: string }>;
   totalClasses: number;
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-dvh flex flex-col justify-between pt-16">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-[85vh] sm:min-h-[620px] lg:min-h-[660px] flex flex-col justify-between pt-14 pb-4 sm:pb-6">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -137,10 +136,10 @@ function HeroSection({
       />
 
       <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-4 sm:py-6">
-        {/* Top: Logo + Title + Buttons */}
+        {/* Top: Logo + Title + Subtitle + Buttons */}
         <div className="flex flex-col items-center text-center my-auto pt-2 sm:pt-4">
 
-          {/* Logo Markaz Fiqih di atas Judul (Ukuran Dikecilkan Sedikit) */}
+          {/* 1. Logo Markaz Fiqih */}
           <motion.img
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -150,26 +149,26 @@ function HeroSection({
             className="h-8 sm:h-10 lg:h-12 w-auto mb-3 brightness-0 invert"
           />
 
-          {/* 1. Judul (Objek Judul Dibesarkan) */}
+          {/* 2. Ahlan wa Sahlan di & 3. Kelas Markaz Fiqih */}
           <h1 className="font-serif font-bold leading-[1.12] tracking-tight max-w-4xl">
             <span
-              className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic mb-1"
+              className="block text-xl sm:text-3xl lg:text-4xl font-semibold italic mb-1"
               style={{ color: 'hsl(var(--accent))' }}
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-5xl sm:text-7xl lg:text-8xl font-extrabold text-white">
+            <span className="block text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white">
               Kelas Markaz Fiqih
             </span>
           </h1>
 
-          {/* 2. Deskripsi */}
-          <p className="text-white/85 text-sm sm:text-lg lg:text-xl mt-4 leading-relaxed max-w-2xl">
-            Program pembelajaran fiqih madzhab Syafi'i online & offline yang mudah diikuti oleh masyarakat umum hingga penuntut ilmu.
+          {/* 4. Subtitle Deskripsi */}
+          <p className="text-white/90 text-sm sm:text-lg lg:text-xl mt-3 sm:mt-4 leading-relaxed max-w-2xl font-medium">
+            Tempat Belajar Fiqih Madzhab Syafi'i Yang Sistematis dan Terstruktur
           </p>
 
-          {/* 3. Dua tombol CTA */}
-          <div className="mt-6 sm:mt-8 flex flex-wrap justify-center items-center gap-3">
+          {/* 5. CTA Buttons */}
+          <div className="mt-5 sm:mt-7 flex flex-wrap justify-center items-center gap-3">
             <motion.div
               className="inline-block"
               whileHover={{ scale: 1.02 }}
@@ -179,7 +178,7 @@ function HeroSection({
               <Button
                 asChild
                 size="lg"
-                className="h-[52px] px-8 text-base font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg"
+                className="h-[48px] sm:h-[52px] px-8 text-base font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg"
                 style={{ backgroundColor: 'hsl(var(--accent))' }}
               >
                 <Link href="/katalog">Mulai Belajar</Link>
@@ -195,7 +194,7 @@ function HeroSection({
                 asChild
                 variant="ghost"
                 size="lg"
-                className="h-[52px] px-7 text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25"
+                className="h-[48px] sm:h-[52px] px-7 text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25"
               >
                 <Link href="/katalog">
                   Lihat Kelas Tersedia
@@ -206,19 +205,19 @@ function HeroSection({
           </div>
         </div>
 
-        {/* Jargon Markaz Fiqih di bagian bawah seperti Quote */}
+        {/* 6. Markaz Fiqih Header & 7. "Membumikan Fiqih di Setiap Lini Kehidupan" */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center"
+          className="pt-4 sm:pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center mt-4"
         >
-          <blockquote className="font-serif italic text-white/90 text-sm sm:text-base leading-relaxed">
-            &ldquo;Tempat Belajar Fiqih Madzhab Syafi'i Yang Sistematis dan Terstruktur.&rdquo;
-          </blockquote>
-          <p className="text-[11px] uppercase tracking-widest text-white/60 mt-1 font-semibold">
-            — Markaz Fiqih
+          <p className="text-xs uppercase tracking-widest text-white/80 font-bold mb-1">
+            Markaz Fiqih
           </p>
+          <blockquote className="font-serif italic text-white/95 text-sm sm:text-base leading-relaxed">
+            &ldquo;Membumikan Fiqih di Setiap Lini Kehidupan&rdquo;
+          </blockquote>
         </motion.div>
       </div>
     </section>
