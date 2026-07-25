@@ -115,7 +115,7 @@ function HeroSection({
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-[85vh] sm:min-h-[620px] lg:min-h-[660px] flex flex-col justify-between pt-14 pb-4 sm:pb-6">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-screen min-h-dvh flex flex-col justify-between pt-16 pb-6">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -135,7 +135,7 @@ function HeroSection({
         style={{ opacity: 0.22, mixBlendMode: 'luminosity', maskImage: 'linear-gradient(to top, black 30%, transparent 85%), linear-gradient(to right, black 40%, transparent 100%)', maskComposite: 'intersect' }}
       />
 
-      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-4 sm:py-6">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-6 sm:py-8">
         {/* Top: Logo + Title + Subtitle + Buttons */}
         <div className="flex flex-col items-center text-center my-auto pt-2 sm:pt-4">
 
@@ -146,7 +146,7 @@ function HeroSection({
             transition={{ duration: 0.4 }}
             src="/logo.png"
             alt="Markaz Fiqih"
-            className="h-8 sm:h-10 lg:h-12 w-auto mb-3 brightness-0 invert"
+            className="h-8 sm:h-10 lg:h-12 w-auto mt-2 mb-5 sm:mb-6 brightness-0 invert"
           />
 
           {/* 2. Ahlan wa Sahlan di & 3. Kelas Markaz Fiqih */}

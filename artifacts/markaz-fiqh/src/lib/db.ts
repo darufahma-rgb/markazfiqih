@@ -1289,20 +1289,27 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
   const result: AdminInvoiceItem[] = [];
   const fetchedIds = new Set<string>();
 
-  // 1. Fetch live invoices directly from Mayar API
+  // 1. Fetch live invoices directly from Mayar API in a pagination loop
   try {
-    const res = await fetch('https://api.mayar.id/hl/v1/invoice?pageSize=100', {
-      headers: {
-        Authorization: `Bearer ${MAYAR_LIVE_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    let mayarPage = 1;
+    let hasMore = true;
+    while (hasMore && mayarPage <= 15) {
+      const res = await fetch(`https://api.mayar.id/hl/v1/invoice?page=${mayarPage}&pageSize=50`, {
+        headers: {
+          Authorization: `Bearer ${MAYAR_LIVE_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (res.ok) {
+      if (!res.ok) break;
       const json = await res.json();
       const mayarList = json.data || [];
+      if (mayarList.length === 0) break;
+
       for (const item of mayarList) {
+        if (fetchedIds.has(item.id)) continue;
         fetchedIds.add(item.id);
+
         const statusMap: Record<string, 'pending' | 'paid' | 'failed'> = {
           paid: 'paid',
           closed: 'paid',
@@ -1329,6 +1336,9 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
           items: [{ id: item.id, title: description, price: item.amount || 0 }],
         });
       }
+
+      hasMore = json.hasMore === true && mayarList.length > 0;
+      mayarPage++;
     }
   } catch (err) {
     console.warn('Live Mayar API fetch fallback:', err);
@@ -1402,6 +1412,120 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
   }
 
   return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+// ── Admin: List All Users ─────────────────────────────────────────────────────
+
+export type AdminUserRow = {
+  userId: string;
+  email: string;
+  nickname: string | null;
+  phone: string | null;
+  isAdmin: boolean;
+  createdAt: string;
+  enrollmentCount: number;
+};
+
+export type AdminUsersResponse = {
+  users: AdminUserRow[];
+  totalCount: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+};
+
+export async function listAllUsersForAdmin(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}): Promise<AdminUsersResponse> {
+  const page = params?.page ?? 1;
+  const pageSize = params?.pageSize ?? 20;
+  const search = (params?.search ?? '').toLowerCase().trim();
+
+  // Resilient query from user_profiles, enrollments, and live Mayar customer invoices
+  const { data: profiles } = await supabase.from('user_profiles').select('*');
+  const { data: enrollments } = await supabase.from('enrollments').select('user_id, class_id');
+
+  const enrollmentMap = new Map<string, number>();
+  if (enrollments) {
+    for (const e of enrollments) {
+      if (e.user_id) {
+        enrollmentMap.set(e.user_id, (enrollmentMap.get(e.user_id) || 0) + 1);
+      }
+    }
+  }
+
+  const userMap = new Map<string, AdminUserRow>();
+
+  if (profiles) {
+    for (const p of profiles) {
+      userMap.set(p.user_id, {
+        userId: p.user_id,
+        email: p.email ?? `user_${p.user_id.slice(0, 8)}@markazfiqih.com`,
+        nickname: p.nickname ?? p.full_name ?? 'Pengguna Google',
+        phone: p.phone ?? null,
+        isAdmin: p.role === 'admin' || p.is_admin === true,
+        createdAt: p.created_at ?? new Date().toISOString(),
+        enrollmentCount: enrollmentMap.get(p.user_id) || 0,
+      });
+    }
+  }
+
+  // Extract Mayar buyers to ensure 100% of purchasers appear in Admin Users
+  try {
+    const invoices = await listAllInvoicesForAdmin();
+    for (const inv of invoices) {
+      if (inv.userNickname && !userMap.has(inv.userId)) {
+        userMap.set(inv.userId, {
+          userId: inv.userId,
+          email: inv.userNickname.includes('@') ? inv.userNickname : `pelanggan_${inv.userId.slice(0, 6)}@markazfiqih.com`,
+          nickname: inv.userNickname,
+          phone: inv.userPhone ?? null,
+          isAdmin: false,
+          createdAt: inv.createdAt,
+          enrollmentCount: inv.items.length || 1,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Mayar user extraction fallback:', err);
+  }
+
+  if (enrollments) {
+    for (const e of enrollments) {
+      if (e.user_id && !userMap.has(e.user_id)) {
+        userMap.set(e.user_id, {
+          userId: e.user_id,
+          email: `user_${e.user_id.slice(0, 8)}@markazfiqih.com`,
+          nickname: `Pengguna ${e.user_id.slice(0, 6)}`,
+          phone: null,
+          isAdmin: false,
+          createdAt: new Date().toISOString(),
+          enrollmentCount: enrollmentMap.get(e.user_id) || 0,
+        });
+      }
+    }
+  }
+
+  let allUsers = Array.from(userMap.values());
+  if (search) {
+    allUsers = allUsers.filter(
+      (u) => (u.nickname ?? '').toLowerCase().includes(search) || u.email.toLowerCase().includes(search) || u.userId.toLowerCase().includes(search)
+    );
+  }
+
+  const totalCount = allUsers.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  const paginatedUsers = allUsers.slice((page - 1) * pageSize, page * pageSize);
+
+  return {
+    users: paginatedUsers,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+  };
 }
 
 // ── Video Watch Progress ──────────────────────────────────────────────────────
@@ -2139,120 +2263,6 @@ export async function listClassRatings(): Promise<Record<string, { averageRating
     };
   }
   return result;
-}
-
-// ── Admin: List All Users ─────────────────────────────────────────────────────
-
-export type AdminUserRow = {
-  userId: string;
-  email: string;
-  nickname: string | null;
-  phone: string | null;
-  isAdmin: boolean;
-  createdAt: string;
-  enrollmentCount: number;
-};
-
-export type AdminUsersResponse = {
-  users: AdminUserRow[];
-  totalCount: number;
-  totalPages: number;
-  page: number;
-  pageSize: number;
-};
-
-export async function listAllUsersForAdmin(params?: {
-  page?: number;
-  pageSize?: number;
-  search?: string;
-}): Promise<AdminUsersResponse> {
-  const page = params?.page ?? 1;
-  const pageSize = params?.pageSize ?? 20;
-  const search = (params?.search ?? '').toLowerCase().trim();
-
-  // Try edge function first
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const { data, error } = await supabase.functions.invoke('list-users', {
-      headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-      body: { page, pageSize, search },
-    });
-    if (!error && data?.users && Array.isArray(data.users)) {
-      return {
-        users: data.users as AdminUserRow[],
-        totalCount: data.totalCount ?? data.users.length,
-        totalPages: data.totalPages ?? 1,
-        page: data.page ?? 1,
-        pageSize: data.pageSize ?? 20,
-      };
-    }
-  } catch (err) {
-    console.warn('Edge function list-users fallback triggered:', err);
-  }
-
-  // Resilient fallback query from user_profiles, enrollments, and invoices
-  const { data: profiles } = await supabase.from('user_profiles').select('*');
-  const { data: enrollments } = await supabase.from('enrollments').select('user_id, class_id');
-
-  const enrollmentMap = new Map<string, number>();
-  if (enrollments) {
-    for (const e of enrollments) {
-      if (e.user_id) {
-        enrollmentMap.set(e.user_id, (enrollmentMap.get(e.user_id) || 0) + 1);
-      }
-    }
-  }
-
-  const userMap = new Map<string, AdminUserRow>();
-
-  if (profiles) {
-    for (const p of profiles) {
-      userMap.set(p.user_id, {
-        userId: p.user_id,
-        email: p.email ?? `user_${p.user_id.slice(0, 8)}@markazfiqih.com`,
-        nickname: p.nickname ?? p.full_name ?? 'Pengguna',
-        phone: p.phone ?? null,
-        isAdmin: p.role === 'admin' || p.is_admin === true,
-        createdAt: p.created_at ?? new Date().toISOString(),
-        enrollmentCount: enrollmentMap.get(p.user_id) || 0,
-      });
-    }
-  }
-
-  if (enrollments) {
-    for (const e of enrollments) {
-      if (e.user_id && !userMap.has(e.user_id)) {
-        userMap.set(e.user_id, {
-          userId: e.user_id,
-          email: `user_${e.user_id.slice(0, 8)}@markazfiqih.com`,
-          nickname: `Pengguna ${e.user_id.slice(0, 6)}`,
-          phone: null,
-          isAdmin: false,
-          createdAt: new Date().toISOString(),
-          enrollmentCount: enrollmentMap.get(e.user_id) || 0,
-        });
-      }
-    }
-  }
-
-  let allUsers = Array.from(userMap.values());
-  if (search) {
-    allUsers = allUsers.filter(
-      (u) => (u.nickname ?? '').toLowerCase().includes(search) || u.email.toLowerCase().includes(search) || u.userId.toLowerCase().includes(search)
-    );
-  }
-
-  const totalCount = allUsers.length;
-  const totalPages = Math.ceil(totalCount / pageSize) || 1;
-  const paginatedUsers = allUsers.slice((page - 1) * pageSize, page * pageSize);
-
-  return {
-    users: paginatedUsers,
-    totalCount,
-    totalPages,
-    page,
-    pageSize,
-  };
 }
 
 // ── Admin: Kelola Enrollment & Class Grants (Prompt 138) ───────────────────────

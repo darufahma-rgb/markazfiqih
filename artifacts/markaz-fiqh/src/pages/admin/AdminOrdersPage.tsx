@@ -60,7 +60,7 @@ function formatOrderDate(iso: string): string {
 }
 
 export default function AdminOrdersPage() {
-  const [activeTab, setActiveTab] = useState<DisplayStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<DisplayStatus | 'all'>('success');
   const [search, setSearch] = useState('');
   const [dateFilterType, setDateFilterType] = useState<DateFilterType>('all');
   const [specificDate, setSpecificDate] = useState('');
@@ -79,7 +79,7 @@ export default function AdminOrdersPage() {
   const filteredInvoices = useMemo(() => {
     return invoices.filter((inv) => {
       // 1. Filter Status
-      if (activeTab !== 'all' && toDisplayStatus(inv.status) !== activeTab) {
+      if (statusFilter !== 'all' && toDisplayStatus(inv.status) !== statusFilter) {
         return false;
       }
 
@@ -135,7 +135,7 @@ export default function AdminOrdersPage() {
 
       return true;
     });
-  }, [invoices, activeTab, search, dateFilterType, specificDate, specificMonth, startDate, endDate]);
+  }, [invoices, statusFilter, search, dateFilterType, specificDate, specificMonth, startDate, endDate]);
 
   const pendingCount = useMemo(
     () => invoices.filter((inv) => inv.status === 'pending').length,
@@ -215,28 +215,28 @@ export default function AdminOrdersPage() {
 
         <Card>
           <CardHeader className="pb-3 space-y-4">
-            {/* Status Tabs */}
+            {/* Status Dropdown Filter */}
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <Tabs
-                value={activeTab}
-                onValueChange={(v) => {
-                  setActiveTab(v as DisplayStatus | 'all');
-                  setPage(1);
-                }}
-              >
-                <TabsList>
-                  {TABS.map((tab) => (
-                    <TabsTrigger key={tab.value} value={tab.value} data-testid={`tab-orders-${tab.value}`}>
-                      {tab.label}
-                      {tab.value === 'pending' && pendingCount > 0 && (
-                        <Badge variant="destructive" className="ml-2 px-1.5 py-0 text-[10px]">
-                          {pendingCount}
-                        </Badge>
-                      )}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-semibold text-foreground">Status Transaksi:</span>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => {
+                    setStatusFilter(v as DisplayStatus | 'all');
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-[190px] h-9 text-xs bg-background">
+                    <SelectValue placeholder="Pilih status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="success">🟢 Berhasil (Paid / Closed)</SelectItem>
+                    <SelectItem value="pending">🟡 Tertunda (Pending)</SelectItem>
+                    <SelectItem value="failed">🔴 Gagal (Failed)</SelectItem>
+                    <SelectItem value="all">⚪ Semua Status</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               {/* Search Bar */}
               <div className="relative w-full sm:w-64">
