@@ -355,7 +355,7 @@ function DashboardContent() {
             </h1>
             <p className="text-muted-foreground mt-1 text-xs sm:text-sm">{motivasi}</p>
           </div>
-          <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
+          <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 pt-0.5 pr-12 lg:pr-14">
             <p className="text-xs text-muted-foreground">{formatTanggal(now)}</p>
             <p className="text-lg font-semibold tabular-nums text-foreground">{formatJam(now)}</p>
           </div>

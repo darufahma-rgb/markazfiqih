@@ -137,7 +137,7 @@ function HeroSection({
 
       <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-6 sm:py-8">
         {/* Top: Logo + Title + Subtitle + Buttons */}
-        <div className="flex flex-col items-center text-center my-auto pt-2 sm:pt-4">
+        <div className="flex flex-col items-center text-center my-auto -mt-6 sm:-mt-10 lg:-mt-12 pt-2 sm:pt-4">
 
           {/* 1. Logo Markaz Fiqih */}
           <motion.img

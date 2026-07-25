@@ -2278,15 +2278,58 @@ export async function listClassRatings(): Promise<Record<string, { averageRating
 export async function listUserEnrollments(
   userId: string,
 ): Promise<{ classId: string; classTitle: string }[]> {
-  const { data, error } = await supabase
+  const result: { classId: string; classTitle: string }[] = [];
+  const addedClassIds = new Set<string>();
+
+  // 1. Fetch from Supabase enrollments
+  const { data } = await supabase
     .from('enrollments')
     .select('class_id, classes(title)')
     .eq('user_id', userId);
-  if (error) throw error;
-  return (data ?? []).map((e: any) => ({
-    classId: e.class_id as string,
-    classTitle: (e.classes?.title ?? '(kelas terhapus)') as string,
-  }));
+
+  if (data) {
+    for (const e of data as any[]) {
+      if (e.class_id && !addedClassIds.has(e.class_id)) {
+        addedClassIds.add(e.class_id);
+        result.push({
+          classId: e.class_id,
+          classTitle: e.classes?.title ?? '(kelas terhapus)',
+        });
+      }
+    }
+  }
+
+  // 2. Fetch from Mayar paid invoices
+  try {
+    const { data: classesData } = await supabase.from('classes').select('id, title, slug');
+    const classList = classesData || [];
+
+    const invoices = await listAllInvoicesForAdmin();
+    const userInvoices = invoices.filter(
+      (inv) =>
+        inv.status === 'paid' &&
+        (inv.userId === userId || (inv.userNickname && inv.userNickname.toLowerCase().includes(userId.toLowerCase()))),
+    );
+
+    for (const inv of userInvoices) {
+      const itemTitles = inv.items.map((i) => i.title.toLowerCase()).join(' ');
+      for (const cls of classList) {
+        const titleMatch = itemTitles.includes(cls.title.toLowerCase());
+        const slugMatch = cls.slug && itemTitles.includes(cls.slug.toLowerCase());
+        if ((titleMatch || slugMatch) && !addedClassIds.has(cls.id)) {
+          addedClassIds.add(cls.id);
+          result.push({
+            classId: cls.id,
+            classTitle: cls.title,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Mayar enrollments extraction note:', err);
+  }
+
+  return result;
 }
 
 export async function adminAddEnrollment(userId: string, classId: string): Promise<void> {
