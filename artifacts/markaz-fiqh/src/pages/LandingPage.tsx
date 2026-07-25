@@ -137,7 +137,7 @@ function HeroSection({
 
       <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-6 sm:py-8">
         {/* Top: Logo + Title + Subtitle + Buttons */}
-        <div className="flex flex-col items-center text-center my-auto -mt-6 sm:-mt-10 lg:-mt-12 pt-2 sm:pt-4">
+        <div className="flex flex-col items-center text-center my-auto -mt-2 sm:-mt-4 lg:-mt-6 pt-2 sm:pt-4">
 
           {/* 1. Logo Markaz Fiqih */}
           <motion.img
@@ -210,7 +210,7 @@ function HeroSection({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="pt-4 sm:pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center mb-2 sm:mb-4 font-['Plus_Jakarta_Sans',sans-serif]"
+          className="pt-4 sm:pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center mb-6 sm:mb-8 font-['Plus_Jakarta_Sans',sans-serif]"
         >
           <p className="text-xs uppercase tracking-widest text-white/80 font-bold mb-1 font-['Plus_Jakarta_Sans',sans-serif]">
             Markaz Fiqih
