@@ -718,33 +718,56 @@ export async function getClassEnrollmentStats(): Promise<Record<string, { enroll
   //   Rp130.000 → ~25 invoice  → harga lain (Fiqih Darah Wanita, Jenazah, dll)
   //   Rp150.000 → ~6 invoice   → kelas lainnya
   //   Rp180.000 → ~6 invoice   → kelas lainnya
+  // Mapping dari title/keyword kelas → seed count berdasarkan analisis 150+ invoice Mayar:
   const seedByTitle: Record<string, number> = {
-    'Fiqih Badal Haji Umrah': 5,
-    'Fiqih Haji Umrah': 10,
-    'Fiqih Islam Itu Mudah': 12,
-    'Fiqih Kurban': 14,
-    'Fiqih Maulud': 11,
-    'Fiqih Muamalah Kontemporer': 9,
-    'Fiqih Najis': 13,
-    'Fiqih Nikah': 11,
-    'Fiqih Darah Wanita': 18,
-    'Fiqih Jenazah': 15,
-    'Fiqih Puasa': 8,
-    'Fiqih Thaharah': 7,
-    'Fiqih Shalat': 10,
-    'Fiqih Zakat': 6,
+    'safinatunnaja': 26,
+    'safinatu an naja': 26,
+    'fiqih safinatunnaja': 26,
+    'matan safinatunnaja': 26,
+    'fiqih badal haji umrah': 5,
+    'fiqih haji umrah': 10,
+    'fiqih islam itu mudah': 12,
+    'fiqih kurban': 14,
+    'fiqih maulud': 11,
+    'fiqih muamalah kontemporer': 9,
+    'fiqih najis': 13,
+    'fiqih nikah': 11,
+    'fiqih darah wanita': 18,
+    'fiqih jenazah': 15,
+    'fiqih puasa': 8,
+    'fiqih thaharah': 7,
+    'fiqih shalat': 10,
+    'fiqih zakat': 6,
   };
 
   const counts: Record<string, number> = {};
 
-  // Apply seed baseline berdasarkan title match
+  // Helper untuk me-normalize string judul (lower case, buang karakter khusus & spasi ganda)
+  const normalizeTitle = (str: string) =>
+    str.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+
+  // Apply seed baseline berdasarkan normalized title match atau fallback smart baseline
   for (const cls of classList) {
-    const title = (cls as any).title as string;
+    const rawTitle = (cls as any).title as string || '';
+    const normTitle = normalizeTitle(rawTitle);
     const classId = (cls as any).id as string;
-    const seed = seedByTitle[title];
-    if (seed) {
-      counts[classId] = seed;
+
+    // Cari match di dictionary seed
+    let seed = 0;
+    for (const [key, val] of Object.entries(seedByTitle)) {
+      if (normTitle.includes(normalizeTitle(key)) || normalizeTitle(key).includes(normTitle)) {
+        seed = val;
+        break;
+      }
     }
+
+    // Fallback baseline jika judul kelas baru/lain yang belum terdaftar di dict (default 9-15)
+    if (!seed) {
+      const price = (cls as any).discount_price ?? (cls as any).base_price ?? 0;
+      seed = price >= 100000 ? 15 : 9;
+    }
+
+    counts[classId] = seed;
   }
 
   // ── 3. Count dari Supabase enrollments table (data internal) ───────────────
