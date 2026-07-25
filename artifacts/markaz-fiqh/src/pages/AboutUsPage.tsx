@@ -121,28 +121,23 @@ export function AboutUsPage() {
               ) : (
                 <div className="space-y-4 text-muted-foreground leading-relaxed mb-12">
                   <p>
-                    Markaz Fiqih adalah lembaga keilmuan yang berfokus pada edukasi, kaderisasi,
-                    publikasi dan pengembangan kajian fiqih. Dirintis oleh alumni Universitas
-                    Al-Azhar, Kairo, Markaz Fiqih hadir dengan cita-cita menjadi pusat rujukan
-                    fiqih yang berlandaskan madzhab Syafi'i. Membawa visi: membumikan fiqih di
-                    setiap lini kehidupan.
+                    Kelas Markaz Fiqih merupakan program pembelajaran yang diselenggarakan oleh
+                    Markaz Fiqih sebagai tempat belajar fiqih madzhab Syafi'i yang sistematis dan
+                    terstruktur. Program ini terdiri atas tiga jenis pembelajaran, yaitu Kelas Fiqih
+                    Tematik, Kelas Fiqih Kitab, dan Akademi Markaz Fiqih, yang dirancang untuk
+                    memenuhi kebutuhan belajar masyarakat dengan tingkat kedalaman dan tujuan yang
+                    berbeda.
                   </p>
                   <p>
-                    Markaz Fiqih terbuka bagi seluruh lapisan masyarakat, mulai dari masyarakat
-                    umum, mahasiswa, santri, hingga para asatidz yang ingin memperdalam fiqih
-                    secara sistematis.
+                    Dengan pendekatan pembelajaran yang sistematis dan terstruktur, program ini
+                    menghadirkan tempat belajar yang mudah diikuti oleh berbagai kalangan, mulai
+                    dari masyarakat umum hingga penuntut ilmu.
                   </p>
                   <p>
-                    Metode fiqih yang diusung oleh Markaz Fiqih adalah fiqih madzhab Syafi'i yang
-                    bersifat solutif, artinya tetap terbuka terhadap pendapat madzhab lain selama
-                    termasuk pendapat yang mu'tabar, diakui validitasnya berdasarkan kaidah
-                    keilmuan Islam.
-                  </p>
-                  <p>
-                    Dengan pendekatan ini, kami berupaya menghadirkan kajian fiqih yang ilmiah,
-                    aplikatif, dan relevan dengan kebutuhan masyarakat. Sejalan dengan semangat
-                    kami bahwa:{' '}
-                    <em className="text-primary font-medium">Fiqih Islam Itu Mudah.</em>
+                    Pembelajaran utamanya diselenggarakan secara online agar dapat diakses dari
+                    mana saja. Meski demikian, kelas juga diselenggarakan secara offline (tatap muka)
+                    pada kesempatan atau momentum tertentu sesuai dengan ketersediaan dan kondisi
+                    yang ada.
                   </p>
                 </div>
               )}
@@ -379,12 +374,10 @@ export function AboutUsPage() {
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="text-muted-foreground leading-relaxed mt-10"
             >
-              Markaz Fiqih berkomitmen untuk terus menghadirkan fiqih yang mudah dipahami,
-              ilmiah, dan berlandaskan kaidah keilmuan. Kami berharap dapat menjadi wasilah
-              lahirnya generasi mutafaqqih yang mampu menghadirkan solusi fiqih secara bijaksana
-              di tengah masyarakat, dengan cita-cita agar fiqih tidak hanya difahami dalam
-              bentuk teori, melainkan juga membumi, dengan diamalkan dan diterapkan dalam setiap
-              lini kehidupan.
+              Kelas Markaz Fiqih berkomitmen menghadirkan pembelajaran fiqih yang mudah dipahami
+              dan berlandaskan kaidah keilmuan. Melalui program ini, kami berharap dapat menjadi
+              wasilah dalam membumikan fiqih di tengah masyarakat, sehingga fiqih tidak hanya
+              dipahami sebagai teori, tetapi juga diamalkan dan diterapkan di setiap lini kehidupan.
             </motion.p>
 
             {/* ── Ikuti Kami ────────────────────────────────────────────── */}

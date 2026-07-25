@@ -143,17 +143,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile top bar — visible only below lg breakpoint */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] border-b border-white/10 shadow-md">
-        <Link href="/" className="flex items-center">
-          <img src="/logo.png" alt="Markaz Fiqih" className="h-6.5 w-auto brightness-0 invert" />
-        </Link>
-        <div className="flex items-center gap-1">
-          <div className="[&_svg]:text-white/80 [&_svg]:hover:text-white [&_button]:hover:bg-white/10">
-            <NotificationBell />
-          </div>
-          {/* Mobile hamburger: tombol dengan whileHover/whileTap */}
+        {/* Kiri: Hamburger menu + Logo */}
+        <div className="flex items-center gap-2">
           <motion.button
             onClick={() => setMobileOpen(true)}
-            className="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-friendly"
+            className="p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-friendly"
             aria-label="Buka menu navigasi"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -161,6 +155,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-6 w-6" />
           </motion.button>
+          <Link href="/" className="flex items-center">
+            <img src="/logo.png" alt="Markaz Fiqih" className="h-6.5 w-auto brightness-0 invert" />
+          </Link>
+        </div>
+
+        {/* Kanan: Notification Bell */}
+        <div className="flex items-center gap-1">
+          <div className="[&_svg]:text-white/80 [&_svg]:hover:text-white [&_button]:hover:bg-white/10">
+            <NotificationBell />
+          </div>
         </div>
       </div>
 
