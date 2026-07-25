@@ -297,7 +297,7 @@ export function ClassCard({
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
               <span className="flex items-center gap-1.5 font-medium text-foreground/80">
                 <Users className="w-3.5 h-3.5 text-primary shrink-0" />
-                {stat?.enrolledCount ? `${stat.enrolledCount} Pelajar` : 'Baru Rilis'}
+                {stat?.enrolledCount ? `Dimiliki ${stat.enrolledCount} Pelajar` : 'Baru Rilis'}
               </span>
               <span className="text-[11px] text-muted-foreground">Akses Selamanya</span>
             </div>

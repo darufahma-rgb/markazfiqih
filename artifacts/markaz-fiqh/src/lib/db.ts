@@ -679,30 +679,19 @@ export async function getClassEnrollmentStats(): Promise<Record<string, { enroll
   const { data: classesData } = await supabase.from('classes').select('id, title, slug');
   const classList = classesData || [];
 
-  // 3. Count from live Mayar invoices
+  // 3. Count from all 100+ live Mayar invoices
   try {
-    const res = await fetch('https://api.mayar.id/hl/v1/invoice?pageSize=100', {
-      headers: {
-        Authorization: `Bearer ${MAYAR_LIVE_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const invoices = await listAllInvoicesForAdmin();
+    for (const inv of invoices) {
+      const isPaid = inv.status === 'paid';
+      if (!isPaid) continue;
 
-    if (res.ok) {
-      const json = await res.json();
-      const mayarList = json.data || [];
-      for (const item of mayarList) {
-        const isPaid = item.status === 'paid' || item.status === 'closed';
-        if (!isPaid) continue;
-
-        const desc = (item.description || item.name || '').toLowerCase();
-        for (const cls of classList) {
-          const titleMatch = desc.includes(cls.title.toLowerCase());
-          const slugMatch = cls.slug && desc.includes(cls.slug.toLowerCase());
-          if (titleMatch || slugMatch) {
-            counts[cls.id] = (counts[cls.id] || 0) + 1;
-            break;
-          }
+      const itemTitles = inv.items.map((i) => i.title.toLowerCase()).join(' ');
+      for (const cls of classList) {
+        const titleMatch = itemTitles.includes(cls.title.toLowerCase());
+        const slugMatch = cls.slug && itemTitles.includes(cls.slug.toLowerCase());
+        if (titleMatch || slugMatch) {
+          counts[cls.id] = (counts[cls.id] || 0) + 1;
         }
       }
     }
