@@ -65,7 +65,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
               <img
                 src="/logo.png"
                 alt="Markaz Fiqih"
-                className={`h-10 w-auto${isDark ? ' brightness-0 invert' : ''}`}
+                className="h-10 w-auto brightness-0 invert"
               />
             </Link>
           </div>

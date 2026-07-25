@@ -75,7 +75,6 @@ export default function LoginPage() {
                 src="/logo.png"
                 alt="Markaz Fiqih"
                 className="h-8 w-auto"
-                style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(89%) saturate(3207%) hue-rotate(340deg) brightness(90%) contrast(96%)' }}
               />
             </div>
             
