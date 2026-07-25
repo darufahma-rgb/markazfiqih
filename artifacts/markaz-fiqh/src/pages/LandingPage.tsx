@@ -839,7 +839,7 @@ function ContactSection({
             src="/logo.png"
             alt="Markaz Fiqih"
             loading="lazy"
-            className="h-7 w-auto brightness-0 invert"
+            className="h-6 w-auto brightness-0 invert"
           />
           <p className="text-xs text-white/60">
             © {new Date().getFullYear()} Markaz Fiqih. Seluruh hak cipta dilindungi.

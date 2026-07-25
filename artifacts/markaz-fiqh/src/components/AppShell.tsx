@@ -49,7 +49,7 @@ function SidebarContent({
     <div className="flex flex-col h-full w-full bg-gradient-to-b from-primary to-[hsl(var(--brand-red-hover))]">
       <div className="h-16 flex items-center px-6 border-b border-[hsl(var(--accent))]/30 shrink-0">
         <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-          <img src="/logo.png" alt="Markaz Fiqih" className="h-9 w-auto brightness-0 invert" />
+          <img src="/logo.png" alt="Markaz Fiqih" className="h-7 w-auto brightness-0 invert" />
         </Link>
       </div>
 
@@ -144,7 +144,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile top bar — visible only below lg breakpoint */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] border-b border-white/10 shadow-md">
         <Link href="/" className="flex items-center">
-          <img src="/logo.png" alt="Markaz Fiqih" className="h-8 w-auto brightness-0 invert" />
+          <img src="/logo.png" alt="Markaz Fiqih" className="h-6.5 w-auto brightness-0 invert" />
         </Link>
         <div className="flex items-center gap-1">
           <div className="[&_svg]:text-white/80 [&_svg]:hover:text-white [&_button]:hover:bg-white/10">

@@ -36,7 +36,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
         <div className="relative bg-white rounded-[20px] shadow-xl border border-[hsl(var(--brand-gold-pale))] p-10 max-w-md w-full text-center">
           {/* Badge logo — gradient merah + tekstur pattern + ring gold tipis */}
-          <div className="relative mx-auto w-20 h-20 mb-6">
+          <div className="relative mx-auto w-16 h-16 mb-5">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] shadow-lg shadow-primary/30" />
             <div
               aria-hidden="true"
