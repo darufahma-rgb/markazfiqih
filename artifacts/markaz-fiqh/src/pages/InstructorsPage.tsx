@@ -90,9 +90,5 @@ function InstructorsContent() {
 }
 
 export default function InstructorsPage() {
-  return (
-    <ProtectedRoute>
-      <InstructorsContent />
-    </ProtectedRoute>
-  );
+  return <InstructorsContent />;
 }

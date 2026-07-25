@@ -169,9 +169,5 @@ function InstructorDetailContent({ id }: { id: string }) {
 
 export default function InstructorDetailPage() {
   const params = useParams<{ id: string }>();
-  return (
-    <ProtectedRoute>
-      <InstructorDetailContent id={params.id ?? ''} />
-    </ProtectedRoute>
-  );
+  return <InstructorDetailContent id={params.id ?? ''} />;
 }

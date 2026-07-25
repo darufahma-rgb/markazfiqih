@@ -297,9 +297,5 @@ function BundlesContent() {
 }
 
 export default function BundlesPage() {
-  return (
-    <ProtectedRoute>
-      <BundlesContent />
-    </ProtectedRoute>
-  );
+  return <BundlesContent />;
 }

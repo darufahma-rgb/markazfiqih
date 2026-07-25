@@ -930,9 +930,5 @@ function CatalogContent() {
 }
 
 export default function CatalogPage() {
-  return (
-    <ProtectedRoute>
-      <CatalogContent />
-    </ProtectedRoute>
-  );
+  return <CatalogContent />;
 }

@@ -93,7 +93,7 @@ attached_assets/   Course images and design docs
 
 ## Auth / access control
 
-All routes except `/login` and `/onboarding-nama` are wrapped in `ProtectedRoute` directly in `artifacts/markaz-fiqh/src/App.tsx`. Unauthenticated visitors on any URL see the "Yuk, Masuk Dulu" prompt with a Google login button that preserves the original URL via `?redirect=` so they land on the right page after signing in. The `ProtectedRoute` component is in `artifacts/markaz-fiqh/src/components/ProtectedRoute.tsx`.
+Public routes (`/`, `/katalog`, `/class/:id`, `/paket-bundle`, `/pengajar`, `/pengajar/:id`, `/tentang-kami`, `/ebook/:id`, `/login`, `/onboarding-nama`) are accessible to unauthenticated visitors without requiring login. Protected routes (`/dashboard`, `/my-classes`, `/keranjang`, `/learn/:classId`, `/ebook-saya`, `/checkout`, `/pembayaran/:invoiceId`, `/sertifikat/:id`, `/admin/*`) are wrapped in `ProtectedRoute` or `RequireAdminRoute`. When an unauthenticated visitor attempts a restricted action (e.g. checkout, add to cart, or opening a protected page), they are redirected to `/login?redirect=...` so they land on the right page after signing in. The `ProtectedRoute` component is in `artifacts/markaz-fiqh/src/components/ProtectedRoute.tsx`.
 
 ## Replit setup notes
 

@@ -217,9 +217,5 @@ function EbookDetailContent() {
 }
 
 export default function EbookDetailPage() {
-  return (
-    <ProtectedRoute>
-      <EbookDetailContent />
-    </ProtectedRoute>
-  );
+  return <EbookDetailContent />;
 }

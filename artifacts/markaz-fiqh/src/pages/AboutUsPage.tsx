@@ -84,8 +84,7 @@ export function AboutUsPage() {
   ] as Array<{ label: string; icon: typeof Instagram | typeof TikTokIcon; href: string }>;
 
   return (
-    <ProtectedRoute>
-      <AppShell>
+    <AppShell>
         <main className="min-h-screen bg-background">
           <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[800px]">
 
@@ -419,6 +418,5 @@ export function AboutUsPage() {
           </div>
         </main>
       </AppShell>
-    </ProtectedRoute>
   );
 }
