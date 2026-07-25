@@ -663,17 +663,51 @@ export async function removeCartItem(itemId: string) {
 // ─── ENROLLMENTS ──────────────────────────────────────────────────────────────
 
 export async function getClassEnrollmentStats(): Promise<Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' }>> {
-  const { data, error } = await supabase
-    .from('enrollments')
-    .select('class_id');
-
   const counts: Record<string, number> = {};
-  if (!error && data) {
-    for (const item of data) {
+
+  // 1. Count from Supabase enrollments table
+  const { data: enrollmentsData } = await supabase.from('enrollments').select('class_id');
+  if (enrollmentsData) {
+    for (const item of enrollmentsData) {
       if (item.class_id) {
         counts[item.class_id] = (counts[item.class_id] || 0) + 1;
       }
     }
+  }
+
+  // 2. Fetch classes list to match Mayar transactions
+  const { data: classesData } = await supabase.from('classes').select('id, title, slug');
+  const classList = classesData || [];
+
+  // 3. Count from live Mayar invoices
+  try {
+    const res = await fetch('https://api.mayar.id/hl/v1/invoice?pageSize=100', {
+      headers: {
+        Authorization: `Bearer ${MAYAR_LIVE_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const mayarList = json.data || [];
+      for (const item of mayarList) {
+        const isPaid = item.status === 'paid' || item.status === 'closed';
+        if (!isPaid) continue;
+
+        const desc = (item.description || item.name || '').toLowerCase();
+        for (const cls of classList) {
+          const titleMatch = desc.includes(cls.title.toLowerCase());
+          const slugMatch = cls.slug && desc.includes(cls.slug.toLowerCase());
+          if (titleMatch || slugMatch) {
+            counts[cls.id] = (counts[cls.id] || 0) + 1;
+            break;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Mayar sales count fetch fallback:', err);
   }
 
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);

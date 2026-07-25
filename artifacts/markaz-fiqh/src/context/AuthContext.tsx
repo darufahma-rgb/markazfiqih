@@ -112,6 +112,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (mounted) setUser(appUser);
           settleLoading();
 
+          // Sync Google / OAuth user profile to user_profiles table so Admin Users list retrieves them
+          if (session?.user) {
+            supabase
+              .from('user_profiles')
+              .upsert(
+                {
+                  user_id: session.user.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata?.full_name ?? session.user.email,
+                  avatar_url: session.user.user_metadata?.avatar_url ?? null,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'user_id', ignoreDuplicates: false },
+              )
+              .then(({ error }) => {
+                if (error) console.warn('user_profiles sync note:', error.message);
+              });
+          }
+
           // Hanya saat SIGNED_IN (login pertama sesi ini), bukan setiap kali
           // auth state berubah, supaya tidak dipanggil berulang-ulang untuk
           // user yang sudah lama login.
