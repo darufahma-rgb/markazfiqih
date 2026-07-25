@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import {
   PlayCircle,
   BookOpen,
@@ -219,7 +219,6 @@ function StatsSummary({ enrollments }: { enrollments: EnrollmentItem[] }) {
       (e.class.totalDarsCount === 0 && e.isCompleted),
   ).length;
   // Kelas video tunggal (totalDarsCount = 0) ikut disertakan: dianggap
-  // "1 dars total", selesai (1) kalau isCompleted, belum (0) kalau belum
   const totalDarsAcross = enrollments.reduce(
     (s, e) => s + (e.class.totalDarsCount > 0 ? e.class.totalDarsCount : 1),
     0,
@@ -239,17 +238,17 @@ function StatsSummary({ enrollments }: { enrollments: EnrollmentItem[] }) {
     : '-';
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 rounded-xl border bg-card p-5 shadow-sm">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 rounded-xl border bg-card p-3.5 sm:p-4 shadow-sm">
       {[
         { label: 'Kelas Dimiliki',        value: totalOwned,        icon: BookOpen,    color: 'text-primary'    },
         { label: 'Kelas Tuntas',          value: totalCompleted,    icon: Trophy,      color: 'text-success'    },
         { label: 'Progress Keseluruhan',  value: `${overallPct}%`,  icon: TrendingUp,  color: 'text-brand-gold' },
         { label: 'Total Waktu Konten',    value: totalJam,          icon: Clock,       color: 'text-muted-foreground' },
       ].map(({ label, value, icon: Icon, color }) => (
-        <div key={label} className="text-center space-y-1">
-          <Icon className={`w-5 h-5 mx-auto ${color}`} />
-          <p className={`text-2xl font-bold ${color}`}>{value}</p>
-          <p className="text-xs text-muted-foreground">{label}</p>
+        <div key={label} className="text-center space-y-0.5">
+          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 mx-auto ${color}`} />
+          <p className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground">{label}</p>
         </div>
       ))}
     </div>
@@ -258,6 +257,8 @@ function StatsSummary({ enrollments }: { enrollments: EnrollmentItem[] }) {
 
 // ── Sidebar Progress Belajar ──────────────────────────────────────────────────
 function ProgressSidebar({ enrollments }: { enrollments: EnrollmentItem[] }) {
+  if (enrollments.length === 0) return null;
+
   return (
     <aside className="hidden lg:block sticky top-20 self-start">
       <div className="bg-card rounded-[14px] border p-5 shadow-sm">
@@ -297,6 +298,7 @@ function ProgressSidebar({ enrollments }: { enrollments: EnrollmentItem[] }) {
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 function DashboardContent() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -316,7 +318,6 @@ function DashboardContent() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Pilih satu pesan secara acak setiap kali data selesai dimuat.
   const motivasi = useMemo(() => {
     if (dashboardMessages.length === 0) return MOTIVASI_FALLBACK;
     return dashboardMessages[Math.floor(Math.random() * dashboardMessages.length)].message;
@@ -338,33 +339,33 @@ function DashboardContent() {
     <AppShell>
       <SEO title="Dashboard — Kelas Markaz Fiqih" description="Dashboard area pembelajaran siswa Kelas Markaz Fiqih." />
       {/* Page header */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2 shrink-0">
+      <div className="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-1 shrink-0">
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-start justify-between gap-4"
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--accent))] mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[hsl(var(--accent))] mb-1">
               {getGreeting()}
             </p>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-foreground leading-tight">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-foreground leading-tight">
               Assalamu'alaikum,{' '}
               {user?.nickname ?? user?.name?.split(' ')[0] ?? 'Sahabat'}!
             </h1>
-            <p className="text-muted-foreground mt-2 text-sm">{motivasi}</p>
+            <p className="text-muted-foreground mt-1 text-xs sm:text-sm">{motivasi}</p>
           </div>
-          <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 pt-1">
-            <p className="text-sm text-muted-foreground">{formatTanggal(now)}</p>
-            <p className="text-xl font-semibold tabular-nums text-foreground">{formatJam(now)}</p>
+          <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
+            <p className="text-xs text-muted-foreground">{formatTanggal(now)}</p>
+            <p className="text-lg font-semibold tabular-nums text-foreground">{formatJam(now)}</p>
           </div>
         </motion.div>
       </div>
-      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-8 lg:py-10">
+      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-3 sm:py-5 lg:py-6">
         <DashboardBoardCard />
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-32">
+          <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : classesToShow.length === 0 ? (
@@ -372,17 +373,17 @@ function DashboardContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex flex-col items-center justify-center text-center py-24 px-4 rounded-xl border bg-card"
+            className="flex flex-col items-center justify-center text-center py-16 px-4 rounded-xl border bg-card"
           >
-            <BookOpen className="w-12 h-12 text-primary/40 mx-auto mb-6" />
-            <p className="text-lg font-semibold text-foreground mb-2">
+            <BookOpen className="w-10 h-10 text-primary/40 mx-auto mb-4" />
+            <p className="text-base font-semibold text-foreground mb-1.5">
               Kamu belum memulai kelas apapun
             </p>
-            <p className="text-muted-foreground max-w-sm mb-6">
+            <p className="text-xs text-muted-foreground max-w-sm mb-5">
               Yuk mulai perjalanan belajarmu dari katalog kelas kami.
             </p>
             <motion.div className="inline-block" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
-              <Button asChild size="lg" className="gap-2">
+              <Button asChild size="default" className="gap-2">
                 <Link href="/katalog">
                   <Sparkles className="w-4 h-4" />
                   Jelajahi Katalog
@@ -391,7 +392,7 @@ function DashboardContent() {
             </motion.div>
           </motion.div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-5">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -400,13 +401,13 @@ function DashboardContent() {
               <StatsSummary enrollments={enrollments} />
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-              <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
+              <div className="space-y-4">
                 {/* Lanjutkan Belajar */}
                 {inProgressEnrollments.length > 0 && (
-                  <div className="space-y-4">
-                    <h2 className="font-serif text-xl font-bold">Lanjutkan Belajar</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-3">
+                    <h2 className="font-serif text-lg sm:text-xl font-bold">Lanjutkan Belajar</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <AnimatePresence>
                         {inProgressEnrollments.map((enrollment, idx) => (
                           <KelasCard key={enrollment.id} enrollment={enrollment} index={idx} />
@@ -426,13 +427,13 @@ function DashboardContent() {
                 )}
 
                 {/* Ajakan tambah kelas */}
-                <div className="rounded-xl border-2 border-dashed bg-muted/20 flex flex-col sm:flex-row items-center gap-4 p-6">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-5 h-5 text-primary" />
+                <div className="rounded-xl border-2 border-dashed bg-muted/20 flex flex-col sm:flex-row items-center gap-3.5 p-4 sm:p-5">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 text-center sm:text-left">
-                    <p className="font-semibold text-foreground text-sm">Tambah kelas baru</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="font-semibold text-foreground text-xs sm:text-sm">Tambah kelas baru</p>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
                       Masih banyak ilmu fiqih yang bisa dipelajari, temukan kelas lainnya di
                       katalog.
                     </p>

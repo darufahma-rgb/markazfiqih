@@ -47,9 +47,8 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
-          {/* Kiri: hamburger (mobile) + logo */}
+          {/* Kiri: hamburger (mobile) + desktop logo */}
           <div className="flex items-center gap-1">
-            {/* Hamburger — hanya tampil di mobile, di KIRI sesuai posisi sidebar */}
             <motion.button
               className="md:hidden flex items-center justify-center h-9 w-9 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-friendly"
               onClick={() => setMobileMenuOpen((v) => !v)}
@@ -61,7 +60,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </motion.button>
 
-            <Link href="/" className="flex items-center transition-opacity hover:opacity-90">
+            <Link href="/" className="hidden md:flex items-center transition-opacity hover:opacity-90">
               <img
                 src="/logo.png"
                 alt="Markaz Fiqih"
@@ -69,6 +68,17 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
               />
             </Link>
           </div>
+
+          {/* Tengah: Mobile Logo + kelasmarkazfiqih.com */}
+          <Link
+            href="/"
+            className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 transition-opacity hover:opacity-90 max-w-[65%] overflow-hidden"
+          >
+            <img src="/logo.png" alt="Markaz Fiqih" className="h-5 w-auto shrink-0 brightness-0 invert" />
+            <span className="text-[11px] sm:text-xs font-semibold tracking-tight text-white/95 truncate">
+              kelasmarkazfiqih.com
+            </span>
+          </Link>
 
           {/* Menu desktop — center absolut (tersembunyi di mobile) */}
           <nav className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">

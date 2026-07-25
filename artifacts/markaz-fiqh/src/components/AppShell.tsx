@@ -46,7 +46,7 @@ function SidebarContent({
   const displayName = user?.nickname ?? user?.name ?? 'Pengguna';
 
   return (
-    <div className="flex flex-col h-full w-full bg-gradient-to-b from-primary to-[hsl(var(--brand-red-hover))]">
+    <div className="flex flex-col h-full max-h-dvh w-full overflow-hidden bg-gradient-to-b from-primary to-[hsl(var(--brand-red-hover))]">
       <div className="h-16 flex items-center px-6 border-b border-[hsl(var(--accent))]/30 shrink-0">
         <Link href="/" className="flex items-center gap-2" onClick={onClose}>
           <img src="/logo.png" alt="Markaz Fiqih" className="h-7 w-auto brightness-0 invert" />
@@ -54,7 +54,7 @@ function SidebarContent({
       </div>
 
       {/* Area menu + widget progress bisa di-scroll sendiri di layar pendek
-          (mis. laptop 768-900px tinggi), supaya blok akun di bawah selalu
+          (mis. iPad / Tablet 768-1024px), supaya blok akun di bawah selalu
           terlihat dan tidak pernah terdorong keluar viewport. */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <nav className="flex flex-col gap-1 px-3 py-4">
@@ -81,7 +81,6 @@ function SidebarContent({
           })}
 
           {isAdmin && (
-            // Admin link: tambah hover:scale-[1.02] selaras dengan nav items lainnya
             <Link
               href="/admin"
               onClick={onClose}
@@ -92,10 +91,10 @@ function SidebarContent({
             </Link>
           )}
         </nav>
-
       </div>
 
-      <div className="border-t border-white/20 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shrink-0">
+      {/* Pinned Bottom Account / Logout Box */}
+      <div className="border-t border-white/20 p-3.5 shrink-0 bg-black/10">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-full bg-white text-primary flex items-center justify-center text-sm font-semibold shrink-0 ring-2 ring-white/20">
             {initial}
@@ -104,7 +103,6 @@ function SidebarContent({
             <p className="text-sm font-semibold text-white truncate">{displayName}</p>
             <p className="text-xs text-white/60 truncate">{user?.email}</p>
           </div>
-          {/* Logout button: ikon aksi — whileHover/whileTap + hover:scale-110 pada ikon */}
           <motion.button
             onClick={() => { logout(); onClose?.(); }}
             className="shrink-0 p-2 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-friendly"
@@ -124,7 +122,7 @@ function SidebarContent({
 // ── Desktop sidebar (fixed, hidden on mobile) ────────────────────────────
 export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
   return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 w-[240px] h-screen flex-col border-r border-white/10 z-40">
+    <aside className="hidden lg:flex fixed top-0 bottom-0 left-0 w-[240px] h-dvh max-h-dvh flex-col border-r border-white/10 z-40 overflow-hidden">
       <SidebarContent isAdmin={isAdmin} />
     </aside>
   );
@@ -143,25 +141,31 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile top bar — visible only below lg breakpoint */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] border-b border-white/10 shadow-md">
-        {/* Kiri: Hamburger menu + Logo */}
-        <div className="flex items-center gap-2">
-          <motion.button
-            onClick={() => setMobileOpen(true)}
-            className="p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-friendly"
-            aria-label="Buka menu navigasi"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-          >
-            <Menu className="h-6 w-6" />
-          </motion.button>
-          <Link href="/" className="flex items-center">
-            <img src="/logo.png" alt="Markaz Fiqih" className="h-6.5 w-auto brightness-0 invert" />
-          </Link>
-        </div>
+        {/* 1. Kiri: Ikon Hamburger */}
+        <motion.button
+          onClick={() => setMobileOpen(true)}
+          className="p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-friendly shrink-0"
+          aria-label="Buka menu navigasi"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Menu className="h-6 w-6" />
+        </motion.button>
 
-        {/* Kanan: Notification Bell */}
-        <div className="flex items-center gap-1">
+        {/* 2. Tengah: Logo + kelasmarkazfiqih.com (Proporsional & Presisi) */}
+        <Link
+          href="/"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 transition-opacity hover:opacity-90 max-w-[65%] overflow-hidden"
+        >
+          <img src="/logo.png" alt="Markaz Fiqih" className="h-5 w-auto shrink-0 brightness-0 invert" />
+          <span className="text-[11px] sm:text-xs font-semibold tracking-tight text-white/95 truncate">
+            kelasmarkazfiqih.com
+          </span>
+        </Link>
+
+        {/* 3. Kanan: Ikon Notifikasi */}
+        <div className="flex items-center gap-1 shrink-0">
           <div className="[&_svg]:text-white/80 [&_svg]:hover:text-white [&_button]:hover:bg-white/10">
             <NotificationBell />
           </div>
