@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
+import { SEO } from '@/components/SEO';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -207,6 +208,7 @@ export default function AdminUsersPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Kelola Pengguna" />
       <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-start justify-between gap-4 flex-wrap">

@@ -27,7 +27,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/pengajar', label: 'Pengajar', icon: GraduationCap },
   { href: '/my-classes', label: 'Kelas Saya', icon: BookMarked },
   { href: '/ebook-saya', label: 'Ebook Saya', icon: BookOpen },
-  { href: '/tentang-kami', label: 'Tentang Kami', icon: Info },
+  { href: '/tentang-kami', label: 'Tentang', icon: Info },
 ];
 
 // ── Sidebar content (shared between desktop fixed sidebar & mobile drawer) ──

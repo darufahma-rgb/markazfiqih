@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ShareButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -279,6 +280,7 @@ function BundlesContent() {
 
   return (
     <AppShell>
+      <SEO title="Paket Bundle" />
       <BundlesHeader />
       <main className="px-6 lg:px-10 py-8 max-w-[1400px]">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

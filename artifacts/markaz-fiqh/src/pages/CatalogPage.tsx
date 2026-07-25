@@ -12,6 +12,7 @@ import {
   BookOpen,
   Download,
 } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 import { NotificationBell } from '@/components/NotificationBell';
 
 import { useAuth } from '@/context/AuthContext';
@@ -758,6 +759,7 @@ function CatalogContent() {
 
   return (
     <AppShell>
+      <SEO title="Katalog" />
       <CatalogHeader />
       <main className="px-4 lg:px-10 py-6 lg:py-8 max-w-[1400px]">
 

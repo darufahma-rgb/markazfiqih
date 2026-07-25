@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { SEO } from '@/components/SEO';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -243,6 +244,7 @@ export default function AdminVouchersPage() {
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
+      <SEO title="Akses Khusus" />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -7,19 +7,26 @@ interface SEOProps {
   url?: string;
 }
 
-const DEFAULT_TITLE = 'Kelas Markaz Fiqih';
+const BRAND_NAME = 'Kelas Markaz Fiqih';
 const DEFAULT_DESCRIPTION =
   "Ahlan wa Sahlan di Kelas Markaz Fiqih. Tempat belajar fiqih madzhab Syafi'i yang sistematis dan terstruktur.";
 
 export function SEO({
-  title = DEFAULT_TITLE,
+  title,
   description = DEFAULT_DESCRIPTION,
   image = 'https://kelasmarkazfiqih.vercel.app/opengraph.jpg',
   url = 'https://kelasmarkazfiqih.vercel.app/',
 }: SEOProps) {
+  const fullTitle =
+    !title || title === BRAND_NAME
+      ? BRAND_NAME
+      : title.includes(BRAND_NAME)
+      ? title
+      : `${title} – ${BRAND_NAME}`;
+
   useEffect(() => {
     // 1. Update Document Title
-    document.title = title;
+    document.title = fullTitle;
 
     // 2. Helper to set or create meta tag
     const setMetaTag = (nameOrProperty: string, key: 'name' | 'property', content: string) => {
@@ -37,16 +44,16 @@ export function SEO({
     setMetaTag('robots', 'name', 'index, follow');
 
     // OpenGraph Meta
-    setMetaTag('og:title', 'property', title);
+    setMetaTag('og:title', 'property', fullTitle);
     setMetaTag('og:description', 'property', description);
     setMetaTag('og:url', 'property', url);
     setMetaTag('og:image', 'property', image);
 
     // Twitter Meta
-    setMetaTag('twitter:title', 'name', title);
+    setMetaTag('twitter:title', 'name', fullTitle);
     setMetaTag('twitter:description', 'name', description);
     setMetaTag('twitter:image', 'name', image);
-  }, [title, description, image, url]);
+  }, [fullTitle, description, image, url]);
 
   return null;
 }

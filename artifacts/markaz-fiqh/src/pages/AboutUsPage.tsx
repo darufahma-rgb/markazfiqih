@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Instagram, Facebook, Youtube } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
+import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { getSettings } from '@/lib/db';
@@ -85,6 +86,7 @@ export function AboutUsPage() {
 
   return (
     <AppShell>
+      <SEO title="Tentang" />
         <main className="min-h-screen bg-background">
           <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[800px]">
 
@@ -96,13 +98,13 @@ export function AboutUsPage() {
               className="mb-10"
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--accent))] mb-2">
-                Tentang Kami
+                Tentang
               </p>
               <h1 className="font-serif text-3xl lg:text-4xl font-bold text-foreground">
-                Tentang Markaz Fiqih
+                Kelas Markaz Fiqih
               </h1>
-              <p className="font-serif text-lg italic text-primary mt-3">
-                Pusat Rujukan Fiqih Berlandaskan Madzhab Syafi'i
+              <p className="font-serif text-lg font-medium text-primary mt-3">
+                Tempat Belajar Fiqih Madzhab Syafi'i Yang Sistematis dan Terstruktur
               </p>
             </motion.div>
 

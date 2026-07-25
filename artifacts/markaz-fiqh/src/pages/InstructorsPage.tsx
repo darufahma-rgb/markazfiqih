@@ -1,4 +1,5 @@
 import { Link } from 'wouter';
+import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,6 +27,7 @@ function InstructorsContent() {
 
   return (
     <AppShell>
+      <SEO title="Pengajar" />
       <div className="max-w-5xl mx-auto w-full px-4 lg:px-8 py-8 space-y-6">
         {/* Header */}
         <div>

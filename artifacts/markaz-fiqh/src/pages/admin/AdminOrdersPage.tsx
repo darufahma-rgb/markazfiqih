@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { SEO } from '@/components/SEO';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -191,6 +192,7 @@ export default function AdminOrdersPage() {
 
   return (
     <AdminLayout>
+      <SEO title="Daftar Pesanan" />
       <div className="space-y-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>

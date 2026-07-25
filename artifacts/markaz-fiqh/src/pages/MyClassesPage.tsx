@@ -15,6 +15,7 @@ import {
   Search,
 } from 'lucide-react';
 
+import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
@@ -293,6 +294,7 @@ function MyClassesContent() {
 
   return (
     <AppShell>
+      <SEO title="Kelas Saya" />
       {/* Page header */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2 shrink-0">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
