@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Users, Search, ShieldPlus, UserCog, Trash2, Plus, Send } from 'lucide-react';
+import { Loader2, Users, Search, ShieldPlus, UserCog, Trash2, Plus, Send, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -64,7 +64,6 @@ function formatDate(iso: string): string {
   });
 }
 
-// ─── Helper: grup kelas per kategori (sama seperti AdminBundlesPage) ─────────
 function groupByCategory(classes: ClassRow[]): { category: string; classes: ClassRow[] }[] {
   const map = new Map<string, ClassRow[]>();
   for (const cls of classes) {
@@ -85,6 +84,8 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   // ── Dialog: kelola kelas milik satu user ──────────────────────────────────
   const [manageTarget, setManageTarget] = useState<AdminUserRow | null>(null);
@@ -97,8 +98,8 @@ export default function AdminUsersPage() {
   const [grantClassIds, setGrantClassIds] = useState<string[]>([]);
 
   const usersQuery = useQuery({
-    queryKey: ['admin-all-users'],
-    queryFn: listAllUsersForAdmin,
+    queryKey: ['admin-users-page', page, pageSize, search],
+    queryFn: () => listAllUsersForAdmin({ page, pageSize, search }),
   });
 
   const classesQuery = useQuery({
@@ -118,7 +119,7 @@ export default function AdminUsersPage() {
   const availableToAdd = allClasses.filter((c) => !ownedClassIds.has(c.id));
 
   const invalidateUsers = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-all-users'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-users-page'] });
   };
   const invalidateEnrollments = () => {
     if (manageTarget) {
@@ -180,17 +181,10 @@ export default function AdminUsersPage() {
     },
   });
 
-  const allUsers: AdminUserRow[] = [...(usersQuery.data ?? [])].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
-
-  const filtered = allUsers.filter((u) => {
-    const q = search.toLowerCase();
-    return (
-      u.email.toLowerCase().includes(q) ||
-      (u.nickname ?? '').toLowerCase().includes(q)
-    );
-  });
+  const usersData = usersQuery.data;
+  const usersList = usersData?.users ?? [];
+  const totalCount = usersData?.totalCount ?? 0;
+  const totalPages = usersData?.totalPages ?? 1;
 
   function toggleGrantClassId(classId: string) {
     setGrantClassIds((prev) =>
@@ -219,8 +213,7 @@ export default function AdminUsersPage() {
           <div>
             <h2 className="font-serif text-2xl font-bold text-foreground">Kelola Pengguna</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Daftar semua pengguna terdaftar. Klik salah satu baris untuk menambah/menghapus
-              kelas yang dimilikinya.
+              Daftar semua pengguna terdaftar. Klik salah satu baris untuk melihat nomor WhatsApp atau kelola kelas.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -252,9 +245,12 @@ export default function AdminUsersPage() {
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Cari nama atau email…"
+                placeholder="Cari nama, email, atau WhatsApp…"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 className="pl-8"
                 data-testid="input-search-users"
               />
@@ -270,7 +266,7 @@ export default function AdminUsersPage() {
               <div className="text-center text-sm text-destructive py-8">
                 Gagal memuat daftar pengguna dari server.
               </div>
-            ) : filtered.length === 0 ? (
+            ) : usersList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
                   <Users className="w-7 h-7 text-muted-foreground/50" />
@@ -285,64 +281,107 @@ export default function AdminUsersPage() {
                 </p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Tanggal Daftar</TableHead>
-                    <TableHead className="text-center">Kelas Dimiliki</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((u) => (
-                    <TableRow
-                      key={u.userId}
-                      data-testid={`row-user-${u.userId}`}
-                      className="cursor-pointer hover:bg-muted/40"
-                      onClick={() => setManageTarget(u)}
-                    >
-                      <TableCell className="font-medium text-foreground">
-                        {u.nickname ?? (
-                          <span className="text-muted-foreground italic">Belum diisi</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(u.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {u.enrollmentCount}
-                      </TableCell>
-                      <TableCell>
-                        {u.isAdmin ? (
-                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                            Admin
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Pelajar</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          data-testid={`button-manage-classes-${u.userId}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setManageTarget(u);
-                          }}
-                        >
-                          <UserCog className="h-4 w-4 mr-1.5" />
-                          Kelola Kelas
-                        </Button>
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>WhatsApp</TableHead>
+                      <TableHead>Tanggal Daftar</TableHead>
+                      <TableHead className="text-center">Kelas Dimiliki</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {usersList.map((u) => (
+                      <TableRow
+                        key={u.userId}
+                        data-testid={`row-user-${u.userId}`}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => setManageTarget(u)}
+                      >
+                        <TableCell className="font-medium text-foreground">
+                          {u.nickname ?? (
+                            <span className="text-muted-foreground italic">Belum diisi</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                        <TableCell className="text-xs font-mono">
+                          {u.phone ? (
+                            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                              {u.phone}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50 italic">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          {formatDate(u.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {u.enrollmentCount}
+                        </TableCell>
+                        <TableCell>
+                          {u.isAdmin ? (
+                            <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                              Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Pelajar</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`button-manage-classes-${u.userId}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setManageTarget(u);
+                            }}
+                          >
+                            <UserCog className="h-4 w-4 mr-1.5" />
+                            Kelola Kelas
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination Footer */}
+                <div className="flex items-center justify-between px-6 py-4 border-t text-xs text-muted-foreground">
+                  <div>
+                    Menampilkan <span className="font-semibold text-foreground">{(page - 1) * pageSize + 1}</span> - <span className="font-semibold text-foreground">{Math.min(page * pageSize, totalCount)}</span> dari <span className="font-semibold text-foreground">{totalCount}</span> pengguna
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Sebelumnya
+                    </Button>
+                    <span className="px-2 font-medium text-foreground">
+                      Halaman {page} dari {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Selanjutnya
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -355,7 +394,15 @@ export default function AdminUsersPage() {
             <DialogTitle>
               Kelola Kelas — {manageTarget?.nickname ?? manageTarget?.email}
             </DialogTitle>
-            <DialogDescription>{manageTarget?.email}</DialogDescription>
+            <DialogDescription className="space-y-1 pt-1">
+              <div>Email: <span className="text-foreground font-medium">{manageTarget?.email}</span></div>
+              {manageTarget?.phone && (
+                <div className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                  <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                  WhatsApp: <span>{manageTarget.phone}</span>
+                </div>
+              )}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">

@@ -80,7 +80,7 @@ export default function LoginPage() {
             
             <h2 className="font-serif text-3xl font-bold text-foreground">Selamat Datang</h2>
             <p className="text-muted-foreground">
-              Masuk ke akun google Anda untuk melanjutkan pembelajaran.
+              Masuk ke akun Google Anda untuk melanjutkan pembelajaran.
             </p>
           </div>
 

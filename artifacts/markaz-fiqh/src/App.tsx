@@ -59,15 +59,15 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login" component={LoginPage} />
       <Route path="/onboarding-nama" component={OnboardingNamaPage} />
-      <Route path="/katalog" component={CatalogPage} />
-      <Route path="/class/:id" component={ClassDetailPage} />
-      <Route path="/paket-bundle" component={BundlesPage} />
-      <Route path="/pengajar" component={InstructorsPage} />
-      <Route path="/pengajar/:id" component={InstructorDetailPage} />
-      <Route path="/tentang-kami" component={AboutUsPage} />
-      <Route path="/ebook/:id" component={EbookDetailPage} />
 
-      {/* Halaman privat — wajib login */}
+      {/* Halaman umum & privat — wajib login */}
+      <Route path="/katalog">{() => <P><CatalogPage /></P>}</Route>
+      <Route path="/class/:id">{() => <P><ClassDetailPage /></P>}</Route>
+      <Route path="/paket-bundle">{() => <P><BundlesPage /></P>}</Route>
+      <Route path="/pengajar">{() => <P><InstructorsPage /></P>}</Route>
+      <Route path="/pengajar/:id">{() => <P><InstructorDetailPage /></P>}</Route>
+      <Route path="/tentang-kami">{() => <P><AboutUsPage /></P>}</Route>
+      <Route path="/ebook/:id">{() => <P><EbookDetailPage /></P>}</Route>
       <Route path="/dashboard">{() => <P><DashboardPage /></P>}</Route>
       <Route path="/my-classes">{() => <P><MyClassesPage /></P>}</Route>
       <Route path="/keranjang">{() => <P><CartPage /></P>}</Route>

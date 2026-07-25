@@ -1139,7 +1139,20 @@ export async function getAdminDashboardSummary() {
  * PERLU: RLS policy admin pada tabel invoices agar bisa membaca semua invoice
  * (bukan hanya milik sendiri). Lihat ringkasan akhir Prompt 55 untuk detailnya.
  */
-export async function listAllInvoicesForAdmin() {
+export type AdminInvoiceItem = {
+  id: string;
+  userId: string;
+  userNickname: string | null;
+  userPhone: string | null;
+  totalAmount: number;
+  status: 'pending' | 'paid' | 'failed';
+  mayarInvoiceId: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  items: { id: string; title: string; price: number }[];
+};
+
+export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
   const { data, error } = await supabase
     .from('invoices')
     .select(`
@@ -1148,20 +1161,33 @@ export async function listAllInvoicesForAdmin() {
     `)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((inv: any) => ({
-    id: inv.id as string,
-    userId: inv.user_id as string,
-    totalAmount: inv.total_amount as number,
-    status: inv.status as 'pending' | 'paid' | 'failed',
-    mayarInvoiceId: inv.mayar_invoice_id as string | null,
-    createdAt: inv.created_at as string,
-    paidAt: inv.paid_at as string | null,
-    items: (inv.invoice_items ?? []).map((item: any) => ({
-      id: item.id as string,
-      title: item.classes?.title ?? item.bundles?.title ?? '(tidak diketahui)',
-      price: item.price as number,
-    })),
-  }));
+
+  const userIds = Array.from(new Set((data ?? []).map((inv: any) => inv.user_id).filter(Boolean)));
+  const { data: profiles } = userIds.length > 0
+    ? await supabase.from('user_profiles').select('user_id, nickname, phone').in('user_id', userIds)
+    : { data: [] };
+
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
+
+  return (data ?? []).map((inv: any) => {
+    const profile = profileMap.get(inv.user_id);
+    return {
+      id: inv.id as string,
+      userId: inv.user_id as string,
+      userNickname: (profile?.nickname as string | null) ?? null,
+      userPhone: (profile?.phone as string | null) ?? null,
+      totalAmount: inv.total_amount as number,
+      status: inv.status as 'pending' | 'paid' | 'failed',
+      mayarInvoiceId: inv.mayar_invoice_id as string | null,
+      createdAt: inv.created_at as string,
+      paidAt: inv.paid_at as string | null,
+      items: (inv.invoice_items ?? []).map((item: any) => ({
+        id: item.id as string,
+        title: item.classes?.title ?? item.bundles?.title ?? '(tidak diketahui)',
+        price: item.price as number,
+      })),
+    };
+  });
 }
 
 // ── Video Watch Progress ──────────────────────────────────────────────────────
@@ -1894,21 +1920,45 @@ export type AdminUserRow = {
   userId: string;
   email: string;
   nickname: string | null;
+  phone: string | null;
   isAdmin: boolean;
   createdAt: string;
   enrollmentCount: number;
 };
 
-export async function listAllUsersForAdmin(): Promise<AdminUserRow[]> {
+export type AdminUsersResponse = {
+  users: AdminUserRow[];
+  totalCount: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+};
+
+export async function listAllUsersForAdmin(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}): Promise<AdminUsersResponse> {
   const { data: { session } } = await supabase.auth.getSession();
   const { data, error } = await supabase.functions.invoke('list-users', {
     headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+    body: {
+      page: params?.page ?? 1,
+      pageSize: params?.pageSize ?? 20,
+      search: params?.search ?? '',
+    },
   });
   if (error) throw error;
   if (!data?.users || !Array.isArray(data.users)) {
     throw new Error('Respons tidak valid dari server');
   }
-  return data.users as AdminUserRow[];
+  return {
+    users: data.users as AdminUserRow[],
+    totalCount: data.totalCount ?? data.users.length,
+    totalPages: data.totalPages ?? 1,
+    page: data.page ?? 1,
+    pageSize: data.pageSize ?? 20,
+  };
 }
 
 // ── Admin: Kelola Enrollment & Class Grants (Prompt 138) ───────────────────────

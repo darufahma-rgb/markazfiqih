@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Pastikan pemanggil beneran admin sebelum kasih data semua user
+    // Verify caller is admin
     const { data: callerProfile } = await supabaseAdmin
       .from('user_profiles')
       .select('is_admin')
@@ -52,53 +52,98 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Ambil semua auth users dengan paginasi penuh
-    const allAuthUsers: any[] = [];
     let page = 1;
-    while (true) {
-      const { data: pageData, error: pageError } =
-        await supabaseAdmin.auth.admin.listUsers({ perPage: 1000, page });
-      if (pageError) throw pageError;
-      allAuthUsers.push(...pageData.users);
-      if (pageData.users.length < 1000) break;
-      page++;
+    let pageSize = 20;
+    let search = '';
+
+    const url = new URL(req.url);
+    if (url.searchParams.has('page')) page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+    if (url.searchParams.has('pageSize')) pageSize = Math.max(1, Math.min(100, parseInt(url.searchParams.get('pageSize') || '20', 10)));
+    if (url.searchParams.has('search')) search = url.searchParams.get('search')?.trim().toLowerCase() || '';
+
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        if (body.page) page = Math.max(1, parseInt(body.page, 10));
+        if (body.pageSize) pageSize = Math.max(1, Math.min(100, parseInt(body.pageSize, 10)));
+        if (body.search !== undefined) search = String(body.search).trim().toLowerCase();
+      } catch {
+        // ignore JSON parse error
+      }
     }
 
-    const userIds = allAuthUsers.map((u) => u.id);
+    const { data: listUsersData, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (listUsersError) throw listUsersError;
+
+    const authUsers = listUsersData.users || [];
 
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('user_profiles')
-      .select('user_id, nickname, is_admin')
-      .in('user_id', userIds);
+      .select('user_id, nickname, phone, is_admin');
     if (profilesError) throw profilesError;
 
-    const { data: enrollmentCounts, error: enrollError } = await supabaseAdmin
-      .from('enrollments')
-      .select('user_id')
-      .in('user_id', userIds);
-    if (enrollError) throw enrollError;
-
     const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) ?? []);
-    const enrollCountMap = new Map<string, number>();
-    (enrollmentCounts ?? []).forEach((e: any) => {
-      enrollCountMap.set(e.user_id, (enrollCountMap.get(e.user_id) ?? 0) + 1);
-    });
 
-    const result = allAuthUsers.map((u) => {
+    let combinedUsers = authUsers.map((u) => {
       const profile = profileMap.get(u.id);
       return {
         userId: u.id,
         email: u.email ?? '',
         nickname: profile?.nickname ?? null,
+        phone: profile?.phone ?? null,
         isAdmin: profile?.is_admin ?? false,
         createdAt: u.created_at,
-        enrollmentCount: enrollCountMap.get(u.id) ?? 0,
       };
     });
 
-    return new Response(JSON.stringify({ users: result }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (search) {
+      combinedUsers = combinedUsers.filter((u) => {
+        const emailMatch = u.email.toLowerCase().includes(search);
+        const nameMatch = (u.nickname ?? '').toLowerCase().includes(search);
+        const phoneMatch = (u.phone ?? '').toLowerCase().includes(search);
+        return emailMatch || nameMatch || phoneMatch;
+      });
+    }
+
+    combinedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const totalCount = combinedUsers.length;
+    const totalPages = Math.ceil(totalCount / pageSize) || 1;
+    const safePage = Math.min(page, totalPages);
+
+    const pagedUsers = combinedUsers.slice((safePage - 1) * pageSize, safePage * pageSize);
+    const pagedUserIds = pagedUsers.map((u) => u.userId);
+
+    const { data: enrollmentCounts } = await supabaseAdmin
+      .from('enrollments')
+      .select('user_id')
+      .in('user_id', pagedUserIds.length > 0 ? pagedUserIds : ['dummy']);
+
+    const enrollCountMap = new Map<string, number>();
+    (enrollmentCounts ?? []).forEach((e: any) => {
+      enrollCountMap.set(e.user_id, (enrollCountMap.get(e.user_id) ?? 0) + 1);
     });
+
+    const result = pagedUsers.map((u) => ({
+      ...u,
+      enrollmentCount: enrollCountMap.get(u.userId) ?? 0,
+    }));
+
+    return new Response(
+      JSON.stringify({
+        users: result,
+        totalCount,
+        totalPages,
+        page: safePage,
+        pageSize,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      },
+    );
   } catch (error) {
     return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
