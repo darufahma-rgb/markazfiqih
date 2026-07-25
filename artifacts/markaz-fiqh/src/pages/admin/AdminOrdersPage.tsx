@@ -70,9 +70,9 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  const { data: invoices = [], isLoading, isError } = useQuery({
+  const { data: invoices = [], isLoading, isError } = useQuery<AdminInvoiceItem[]>({
     queryKey: ['admin', 'invoices'],
-    queryFn: listAllInvoicesForAdmin,
+    queryFn: () => listAllInvoicesForAdmin(),
   });
 
   // Filter Data berdasarkan Status, Search, dan Filter Tanggal

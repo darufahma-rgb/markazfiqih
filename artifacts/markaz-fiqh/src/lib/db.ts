@@ -1274,39 +1274,75 @@ export type AdminInvoiceItem = {
 const MAYAR_LIVE_TOKEN =
   'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlM2UyNTEyYi04ZmUxLTRhZTMtYmM3ZC04YzdlYmIwZmY2N2MiLCJhY2NvdW50SWQiOiI1ODExNzgwMi1mY2Y2LTQyMjgtOTJlOC1iOTMyYzk5ZmJlZDEiLCJjcmVhdGVkQXQiOiIxNzg0MDQxNTQyOTgxIiwicm9sZSI6ImRldmVsb3BlciIsInNjb3BlIjp7InJlYWQiOnRydWUsIndyaXRlIjp0cnVlfSwic3ViIjoiZmFxaWh1YmFpZGlsbGFocm96YW4yQGdtYWlsLmNvbSIsIm5hbWUiOiJNYXJrYXogRmlxaWgiLCJsaW5rIjoibWFya2F6ZmlxaWgtNjYwMzgiLCJpc1NlbGZEb21haW4iOm51bGwsImlhdCI6MTc4NDA0MTU0Mn0.TGkUtCz-1XK2w0jPnG0bLvT-mcFcCtmKgxC3GNyEcKbs5cITcOhmIM-PnLGZgkRc4vFufgcjyhewusf-f3bOmcjm-nbpKLQ6DRGyjJnBIMIXDIiN3pFQz_3ErUcQuFeKuo-JLmnxai8BvlHmbKz4hnIhEjmMmO9wpJ4_Pa8R2IAv5bGy1qxOhXkDWPAyXXR6N7QA6iGQxp8xZjlfZzjVHjsJLyuSJEvloEphmfNqtBw_MlNzBrh8oZFJVVXi_aKJiODn851K8Im9wmhqwsBBWyjiEEBdu4VeRjsYcR7UhYTSS38HEzvTGFX7HvyaOkTNRGfG63gHKXk-Tv_Iry2h4Q';
 
-export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
+// ── In-Memory Fast SWR Cache for Mayar & Supabase Invoices (2 min TTL) ────────
+let invoicesCache: { timestamp: number; data: AdminInvoiceItem[] } | null = null;
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+export async function listAllInvoicesForAdmin(options?: boolean | { forceRefresh?: boolean } | any): Promise<AdminInvoiceItem[]> {
+  const forceRefresh = typeof options === 'boolean' ? options : options?.forceRefresh === true;
+  const now = Date.now();
+  if (!forceRefresh && invoicesCache && now - invoicesCache.timestamp < CACHE_TTL_MS) {
+    return invoicesCache.data;
+  }
+
   const result: AdminInvoiceItem[] = [];
   const fetchedIds = new Set<string>();
 
-  // 1. Fetch live invoices directly from Mayar API in a pagination loop
-  try {
-    let mayarPage = 1;
-    let hasMore = true;
-    while (hasMore && mayarPage <= 15) {
-      const res = await fetch(`https://api.mayar.id/hl/v1/invoice?page=${mayarPage}&pageSize=50`, {
+  // Run Mayar Parallel Multi-Page Fetch & Supabase Queries simultaneously in Promise.all!
+  const pageNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  const fetchMayarPage = async (page: number) => {
+    try {
+      const res = await fetch(`https://api.mayar.id/hl/v1/invoice?page=${page}&pageSize=50`, {
         headers: {
           Authorization: `Bearer ${MAYAR_LIVE_TOKEN}`,
           'Content-Type': 'application/json',
         },
       });
-
-      if (!res.ok) break;
+      if (!res.ok) return [];
       const json = await res.json();
-      const mayarList = json.data || [];
-      if (mayarList.length === 0) break;
+      return (json.data || []) as any[];
+    } catch {
+      return [];
+    }
+  };
 
+  const fetchSupabaseData = async () => {
+    try {
+      const [invRes, notifRes] = await Promise.all([
+        supabase.from('invoices').select(`
+          id, user_id, total_amount, status, mayar_invoice_id, created_at, paid_at,
+          invoice_items ( id, class_id, bundle_id, price, classes ( title ), bundles ( title ) )
+        `).order('created_at', { ascending: false }),
+        supabase.from('notifications').select('id, title, message, type, created_at').order('created_at', { ascending: false }),
+      ]);
+      return { invoicesData: invRes.data || [], notifsData: notifRes.data || [] };
+    } catch {
+      return { invoicesData: [], notifsData: [] };
+    }
+  };
+
+  try {
+    const [mayarPagesResults, supabaseResult] = await Promise.all([
+      Promise.all(pageNumbers.map(fetchMayarPage)),
+      fetchSupabaseData(),
+    ]);
+
+    // 1. Process Mayar Parallel Invoices
+    const statusMap: Record<string, 'pending' | 'paid' | 'failed'> = {
+      paid: 'paid',
+      closed: 'paid',
+      success: 'paid',
+      unpaid: 'pending',
+      failed: 'failed',
+      expired: 'failed',
+    };
+
+    for (const mayarList of mayarPagesResults) {
       for (const item of mayarList) {
-        if (fetchedIds.has(item.id)) continue;
+        if (!item || fetchedIds.has(item.id)) continue;
         fetchedIds.add(item.id);
 
-        const statusMap: Record<string, 'pending' | 'paid' | 'failed'> = {
-          paid: 'paid',
-          closed: 'paid',
-          success: 'paid',
-          unpaid: 'pending',
-          failed: 'failed',
-          expired: 'failed',
-        };
         const status = statusMap[item.status?.toLowerCase()] || 'pending';
         const customerName = item.customer?.name || item.customer?.email || 'Pelanggan Mayar';
         const customerPhone = item.customer?.mobile || null;
@@ -1325,31 +1361,17 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
           items: [{ id: item.id, title: description, price: item.amount || 0 }],
         });
       }
-
-      hasMore = json.hasMore === true && mayarList.length > 0;
-      mayarPage++;
     }
-  } catch (err) {
-    console.warn('Live Mayar API fetch fallback:', err);
-  }
 
-  // 2. Query Supabase invoices table
-  const { data: invoicesData } = await supabase
-    .from('invoices')
-    .select(`
-      id, user_id, total_amount, status, mayar_invoice_id, created_at, paid_at,
-      invoice_items ( id, class_id, bundle_id, price, classes ( title ), bundles ( title ) )
-    `)
-    .order('created_at', { ascending: false });
+    // 2. Process Supabase Invoices
+    const { invoicesData, notifsData } = supabaseResult;
+    const userIds = Array.from(new Set(invoicesData.map((inv: any) => inv.user_id).filter(Boolean)));
+    const { data: profiles } = userIds.length > 0
+      ? await supabase.from('user_profiles').select('user_id, nickname, phone').in('user_id', userIds)
+      : { data: [] };
 
-  const userIds = Array.from(new Set((invoicesData ?? []).map((inv: any) => inv.user_id).filter(Boolean)));
-  const { data: profiles } = userIds.length > 0
-    ? await supabase.from('user_profiles').select('user_id, nickname, phone').in('user_id', userIds)
-    : { data: [] };
+    const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
 
-  const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
-
-  if (invoicesData) {
     for (const inv of invoicesData) {
       if (!fetchedIds.has(inv.id)) {
         fetchedIds.add(inv.id);
@@ -1372,15 +1394,8 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
         });
       }
     }
-  }
 
-  // 3. Synthesize any notification transactions
-  const { data: notifsData } = await supabase
-    .from('notifications')
-    .select('id, title, message, type, created_at')
-    .order('created_at', { ascending: false });
-
-  if (notifsData) {
+    // 3. Process Notifications
     for (const n of notifsData) {
       if ((n.type === 'order' || n.type === 'payment' || n.title?.toLowerCase().includes('pesanan') || n.title?.toLowerCase().includes('pembelian')) && !fetchedIds.has(n.id)) {
         fetchedIds.add(n.id);
@@ -1398,9 +1413,13 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
         });
       }
     }
+  } catch (err) {
+    console.warn('Parallel Mayar/Supabase fetch warning:', err);
   }
 
-  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedResult = result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  invoicesCache = { timestamp: now, data: sortedResult };
+  return sortedResult;
 }
 
 // ── Admin: List All Users ─────────────────────────────────────────────────────
