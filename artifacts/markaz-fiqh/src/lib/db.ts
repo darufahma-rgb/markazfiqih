@@ -112,7 +112,7 @@ export async function listClasses(params?: {
       id: c.id as string,
       title: c.title as string,
       description: c.description as string,
-      coverImage: c.cover_image as string,
+      coverImage: getCoverImageUrl(c.title as string, c.cover_image as string),
       basePrice: c.base_price as number,
       discountPrice: c.discount_price as number | null,
       status: c.status as 'draft' | 'published',
@@ -141,6 +141,12 @@ export function slugify(text: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+export function getCoverImageUrl(title: string, rawCover?: string | null): string {
+  if (rawCover && rawCover.trim()) return rawCover;
+  const slug = slugify(title);
+  return `/covers/${slug}.png`;
 }
 
 export async function getClassById(idOrSlug: string) {
@@ -231,7 +237,7 @@ export async function getClassById(idOrSlug: string) {
     slug: slugify((data as any).title as string),
     title: (data as any).title as string,
     description: (data as any).description as string,
-    coverImage: (data as any).cover_image as string,
+    coverImage: getCoverImageUrl((data as any).title as string, (data as any).cover_image as string),
     basePrice: (data as any).base_price as number,
     discountPrice: (data as any).discount_price as number | null,
     status: (data as any).status as 'draft' | 'published',
