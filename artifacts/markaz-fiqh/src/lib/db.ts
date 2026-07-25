@@ -819,17 +819,57 @@ export async function listAllVouchersForAdmin(): Promise<AdminVoucher[]> {
 export async function createVoucher(payload: {
   classId: string;
   code: string;
-  discountPrice: number;
+  discountPrice?: number;
+  discountPercent?: number;
   maxUses: number | null;
 }): Promise<void> {
-  const { error } = await supabase.from('class_vouchers').insert({
-    class_id: payload.classId,
-    code: payload.code.trim().toUpperCase(),
-    discount_price: payload.discountPrice,
-    max_uses: payload.maxUses,
-    is_active: true,
-  });
-  if (error) throw error;
+  const code = payload.code.trim().toUpperCase();
+
+  if (payload.classId === 'ALL_CLASSES') {
+    const classes = await listClasses({ includeAll: true });
+    if (classes.length === 0) throw new Error('Belum ada kelas yang tersedia.');
+
+    const vouchersToInsert = classes.map((c) => {
+      const normalPrice = c.discountPrice ?? c.basePrice;
+      const discountPrice =
+        payload.discountPercent !== undefined
+          ? Math.max(0, Math.round(normalPrice * (1 - payload.discountPercent / 100)))
+          : (payload.discountPrice ?? 0);
+
+      return {
+        class_id: c.id,
+        code,
+        discount_price: discountPrice,
+        max_uses: payload.maxUses,
+        is_active: true,
+      };
+    });
+
+    const { error } = await supabase.from('class_vouchers').insert(vouchersToInsert);
+    if (error) throw error;
+  } else {
+    let finalDiscountPrice = payload.discountPrice ?? 0;
+    if (payload.discountPercent !== undefined) {
+      const { data: cls } = await supabase
+        .from('classes')
+        .select('base_price, discount_price')
+        .eq('id', payload.classId)
+        .single();
+      if (cls) {
+        const normalPrice = cls.discount_price ?? cls.base_price;
+        finalDiscountPrice = Math.max(0, Math.round(normalPrice * (1 - payload.discountPercent / 100)));
+      }
+    }
+
+    const { error } = await supabase.from('class_vouchers').insert({
+      class_id: payload.classId,
+      code,
+      discount_price: finalDiscountPrice,
+      max_uses: payload.maxUses,
+      is_active: true,
+    });
+    if (error) throw error;
+  }
 }
 
 export async function updateVoucherActive(id: string, isActive: boolean): Promise<void> {

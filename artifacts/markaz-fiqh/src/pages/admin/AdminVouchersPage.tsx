@@ -57,14 +57,14 @@ import {
 type VoucherFormState = {
   classId: string;
   code: string;
-  discountPrice: string;
+  discountPercent: string;
   maxUses: string;
 };
 
 const EMPTY_FORM: VoucherFormState = {
   classId: '',
   code: '',
-  discountPrice: '',
+  discountPercent: '',
   maxUses: '',
 };
 
@@ -205,19 +205,11 @@ export default function AdminVouchersPage() {
     setFormWarning(null);
   }
 
-  function handleDiscountPriceChange(value: string) {
-    setForm((p) => ({ ...p, discountPrice: value }));
-    const selectedClass = classes.find((c) => c.id === form.classId);
-    if (selectedClass && value) {
-      const disc = Number(value);
-      const normal = selectedClass.discountPrice ?? selectedClass.basePrice;
-      if (disc >= normal) {
-        setFormWarning(
-          `Harga akses khusus (${formatPrice(disc)}) lebih besar atau sama dengan harga normal kelas (${formatPrice(normal)}). Kode tetap bisa dibuat, tapi pastikan ini disengaja.`,
-        );
-      } else {
-        setFormWarning(null);
-      }
+  function handleDiscountPercentChange(value: string) {
+    setForm((p) => ({ ...p, discountPercent: value }));
+    const percent = Number(value);
+    if (!isNaN(percent) && (percent < 0 || percent > 100)) {
+      setFormWarning('Persentase diskon harus di antara 0% s.d. 100%.');
     } else {
       setFormWarning(null);
     }
@@ -226,16 +218,16 @@ export default function AdminVouchersPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.classId) {
-      toast({ title: 'Pilih kelas dulu', variant: 'destructive' });
+      toast({ title: 'Pilih kelas atau Semua Kelas', variant: 'destructive' });
       return;
     }
     if (!form.code.trim()) {
       toast({ title: 'Kode akses khusus wajib diisi', variant: 'destructive' });
       return;
     }
-    const discountPrice = Number(form.discountPrice);
-    if (isNaN(discountPrice) || discountPrice < 0) {
-      toast({ title: 'Harga akses khusus harus berupa angka ≥ 0', variant: 'destructive' });
+    const discountPercent = Number(form.discountPercent);
+    if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      toast({ title: 'Persentase diskon harus berupa angka antara 0% s.d. 100%', variant: 'destructive' });
       return;
     }
     const maxUses = form.maxUses.trim() ? Number(form.maxUses) : null;
@@ -243,7 +235,7 @@ export default function AdminVouchersPage() {
       toast({ title: 'Batas pemakaian harus berupa angka ≥ 1, atau kosongkan untuk tanpa batas', variant: 'destructive' });
       return;
     }
-    createMutation.mutate({ classId: form.classId, code: form.code, discountPrice, maxUses });
+    createMutation.mutate({ classId: form.classId, code: form.code, discountPercent, maxUses });
   }
 
   const isSaving = createMutation.isPending;
@@ -374,7 +366,7 @@ export default function AdminVouchersPage() {
             <div className="space-y-4 py-4">
               {/* Pilih Kelas */}
               <div className="space-y-2">
-                <Label htmlFor="voucher-class">Kelas</Label>
+                <Label htmlFor="voucher-class">Pilih Kelas</Label>
                 {classesQuery.isLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" /> Memuat daftar kelas...
@@ -382,9 +374,12 @@ export default function AdminVouchersPage() {
                 ) : (
                   <Select value={form.classId} onValueChange={handleClassChange}>
                     <SelectTrigger id="voucher-class">
-                      <SelectValue placeholder="Pilih kelas" />
+                      <SelectValue placeholder="Pilih kelas atau Semua Kelas" />
                     </SelectTrigger>
                     <SelectContent className="max-h-64 overflow-y-auto">
+                      <SelectItem value="ALL_CLASSES" className="font-semibold text-primary">
+                        ⭐ Semua Kelas (Berlaku untuk seluruh kelas)
+                      </SelectItem>
                       {classes.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.title}
@@ -396,6 +391,9 @@ export default function AdminVouchersPage() {
                     </SelectContent>
                   </Select>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  Pilih "Semua Kelas" untuk membuat kode yang otomatis berlaku di seluruh kelas platform.
+                </p>
               </div>
 
               {/* Kode Akses Khusus */}
@@ -403,10 +401,10 @@ export default function AdminVouchersPage() {
                 <Label htmlFor="voucher-code">Kode Akses Khusus</Label>
                 <Input
                   id="voucher-code"
-                  placeholder="Contoh: RAMADAN25"
+                  placeholder="Contoh: RAMADAN25 atau FIQIH100"
                   value={form.code}
                   onChange={(e) => handleCodeChange(e.target.value)}
-                  className="uppercase"
+                  className="uppercase font-mono"
                   required
                 />
                 <p className="text-xs text-muted-foreground">
@@ -414,21 +412,21 @@ export default function AdminVouchersPage() {
                 </p>
               </div>
 
-              {/* Harga Akses Khusus */}
+              {/* Persentase Diskon / Potongan Harga (%) */}
               <div className="space-y-2">
-                <Label htmlFor="voucher-price">Harga Khusus (Rp)</Label>
+                <Label htmlFor="voucher-percent">Persentase Diskon (%) / Potongan Harga (%)</Label>
                 <Input
-                  id="voucher-price"
+                  id="voucher-percent"
                   type="number"
                   min={0}
-                  placeholder="0"
-                  value={form.discountPrice}
-                  onChange={(e) => handleDiscountPriceChange(e.target.value)}
+                  max={100}
+                  placeholder="20"
+                  value={form.discountPercent}
+                  onChange={(e) => handleDiscountPercentChange(e.target.value)}
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Ini adalah harga final yang dibayar pemegang kode akses khusus — bukan persentase potongan.
-                  Isi 0 untuk kelas gratis.
+                  Nilai yang dimasukkan adalah persentase potongan harga (0% - 100%), bukan harga akhir produk/kelas. Isi 100% untuk gratis 100%.
                 </p>
                 {formWarning && (
                   <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 p-3 text-amber-800 dark:text-amber-200">

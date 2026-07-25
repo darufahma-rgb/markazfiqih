@@ -10,6 +10,7 @@ import {
   MapPin,
 } from 'lucide-react';
 
+import { SEO } from '@/components/SEO';
 import { Navbar } from '@/components/Navbar';
 import { FloatingWhatsAppButton } from '@/components/FloatingWhatsAppButton';
 import { Button } from '@/components/ui/button';
@@ -896,6 +897,7 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="flex-1">
+        <SEO />
         {/* 1. Hero — copy lebih personal, badge kredibilitas dari data nyata */}
         <HeroSection
           socialLinks={socialLinks}

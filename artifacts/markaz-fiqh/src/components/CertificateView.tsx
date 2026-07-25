@@ -30,7 +30,6 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
     queryFn: getSettings,
   });
 
-  // Prioritas template: per-kelas → default situs → HTML bawaan
   const activeTemplate =
     cert.certificateTemplateUrl?.trim() ||
     settings?.certificateDefaultTemplateUrl?.trim() ||
@@ -38,7 +37,6 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
 
   const hasTemplate = !!activeTemplate;
 
-  // Merge overlay config dari settings dengan default
   const overlayConfig = mergeOverlayConfig(settings?.certificateOverlayConfig ?? null);
   const fontUrl = overlayConfig.fontUrl ?? null;
   const customFontFamily = fontUrl ? "'sertifikat-custom-font', serif" : undefined;
@@ -50,16 +48,11 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
       const safeName = (cert.fullName || 'peserta').replace(/[^a-zA-Z0-9]+/g, '-');
       const safeClass = (cert.classTitle || 'kelas').replace(/[^a-zA-Z0-9]+/g, '-');
       const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 297mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
 
       if (hasTemplate) {
-        // ── Mode Template: gambar langsung ke Canvas 2D ──────────────────────
-        // Bypass html2canvas sepenuhnya — posisi overlay dikontrol eksak sehingga
-        // hasil PDF identik pixel-perfect dengan preview browser.
-
-        // 1. Muat font kustom via FontFace API agar canvas ctx bisa memakainya
-        let resolvedFontFamily = 'Georgia, serif'; // fallback font-serif
+        let resolvedFontFamily = 'Georgia, serif';
         if (fontUrl) {
           try {
             const ff700 = new FontFace('sertifikat-custom-font', `url(${fontUrl})`, { weight: '700' });
@@ -69,11 +62,10 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
             document.fonts.add(ff400);
             resolvedFontFamily = "'sertifikat-custom-font', serif";
           } catch {
-            // pakai fallback
+            // fallback
           }
         }
 
-        // 2. Muat template image ke HTMLImageElement baru (CORS-safe)
         const templateImg = await new Promise<HTMLImageElement>((resolve, reject) => {
           const img = new Image();
           img.crossOrigin = 'anonymous';
@@ -82,7 +74,6 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
           img.src = activeTemplate!;
         });
 
-        // 3. Buat canvas — ukuran natural image × scale untuk kualitas tinggi
         const SCALE = 3;
         const W = templateImg.naturalWidth * SCALE;
         const H = templateImg.naturalHeight * SCALE;
@@ -91,12 +82,8 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
         canvas.height = H;
         const ctx = canvas.getContext('2d')!;
 
-        // 4. Gambar template
         ctx.drawImage(templateImg, 0, 0, W, H);
 
-        // 5. Gambar setiap overlay teks
-        // CSS: left/top dalam %, transform translate(-50%,-50%) → textAlign center + textBaseline middle
-        // CSS: fontSize dalam cqw (= % dari lebar container = % dari lebar gambar)
         const drawText = (
           text: string,
           cfg: typeof overlayConfig.nama,
@@ -104,7 +91,7 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
         ) => {
           const x = (cfg.left / 100) * W;
           const y = (cfg.top / 100) * H;
-          const px = (cfg.fontSize / 100) * W; // cqw → px (container = lebar gambar)
+          const px = (cfg.fontSize / 100) * W;
           ctx.save();
           ctx.font = `${weight} ${px}px ${resolvedFontFamily}`;
           ctx.fillStyle = cfg.color;
@@ -114,36 +101,29 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
           ctx.restore();
         };
 
-        drawText(cert.fullName,              overlayConfig.nama,    '700');
-        drawText(cert.classTitle,            overlayConfig.kelas,   '400');
+        drawText(cert.fullName, overlayConfig.nama, '700');
+        drawText(cert.classTitle, overlayConfig.kelas, '400');
         drawText(formatTanggal(cert.issuedAt), overlayConfig.tanggal, '400');
 
-        // 6. Export ke PDF
         const imgData = canvas.toDataURL('image/png', 1.0);
         const canvasRatio = W / H;
         const pageRatio = pageWidth / pageHeight;
         let rW = pageWidth, rH = pageHeight, oX = 0, oY = 0;
         if (canvasRatio > pageRatio) { rH = pageWidth / canvasRatio; oY = (pageHeight - rH) / 2; }
-        else                         { rW = pageHeight * canvasRatio; oX = (pageWidth - rW) / 2; }
+        else { rW = pageHeight * canvasRatio; oX = (pageWidth - rW) / 2; }
         pdf.addImage(imgData, 'PNG', oX, oY, rW, rH);
 
       } else {
-        // ── Mode Bawaan: html2canvas (tidak ada template image) ───────────────
         await document.fonts.ready;
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const canvas = await html2canvas(certificateRef.current, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
         });
         const imgData = canvas.toDataURL('image/png', 1.0);
-        const canvasRatio = canvas.width / canvas.height;
-        const pageRatio = pageWidth / pageHeight;
-        let rW = pageWidth, rH = pageHeight, oX = 0, oY = 0;
-        if (canvasRatio > pageRatio) { rH = pageWidth / canvasRatio; oY = (pageHeight - rH) / 2; }
-        else                         { rW = pageHeight * canvasRatio; oX = (pageWidth - rW) / 2; }
-        pdf.addImage(imgData, 'PNG', oX, oY, rW, rH);
+        pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
       }
 
       pdf.save(`Sertifikat-${safeClass}-${safeName}.pdf`);
@@ -155,13 +135,31 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4 w-full items-center">
+      {/* CSS Khusus Print A4 Landscape */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 0;
+          }
+          body {
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       {/* Tombol aksi */}
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end w-full max-w-5xl no-print">
         {showPrintButton && (
           <Button onClick={() => window.print()} variant="outline" className="gap-2">
             <Printer className="w-4 h-4" />
-            Print
+            Cetak / Print
           </Button>
         )}
         <Button onClick={handleDownloadPdf} disabled={isDownloading} className="gap-2">
@@ -173,7 +171,7 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
           ) : (
             <>
               <Download className="w-4 h-4" />
-              Download PDF
+              Download PDF (A4 Landscape)
             </>
           )}
         </Button>
@@ -181,214 +179,191 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
 
       {hasTemplate ? (
         /* ── Mode Template ───────────────────────────────────────────── */
-        <>
-          <div className="bg-white flex items-center justify-center">
-            {/* certificateRef hanya membungkus gambar + overlay — tidak termasuk badge verifikasi */}
-            <div
-              ref={certificateRef}
-              className="relative w-full max-w-5xl"
-              style={{ containerType: 'inline-size' }}
+        <div className="w-full max-w-5xl flex flex-col items-center">
+          <div
+            ref={certificateRef}
+            className="relative w-full aspect-[297/210] overflow-hidden bg-white shadow-xl rounded-lg"
+            style={{ containerType: 'inline-size' }}
+          >
+            {fontUrl && (
+              <style>{`@font-face { font-family: 'sertifikat-custom-font'; src: url('${fontUrl}'); font-display: swap; }`}</style>
+            )}
+
+            <img
+              src={activeTemplate!}
+              alt="Template Sertifikat"
+              crossOrigin="anonymous"
+              className="w-full h-full object-cover block"
+            />
+
+            {/* ── Overlay: Nama ── */}
+            <p
+              className="absolute font-serif font-bold text-center"
+              style={{
+                left: `${overlayConfig.nama.left}%`,
+                top: `${overlayConfig.nama.top}%`,
+                transform: 'translate(-50%, -50%)',
+                fontSize: `${overlayConfig.nama.fontSize}cqw`,
+                color: overlayConfig.nama.color,
+                maxWidth: '60%',
+                wordWrap: 'break-word',
+                lineHeight: 1.2,
+                ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
+              }}
             >
-              {/* Inject @font-face sekali per instance, hanya jika fontUrl terisi */}
-              {fontUrl && (
-                <style>{`@font-face { font-family: 'sertifikat-custom-font'; src: url('${fontUrl}'); font-display: swap; }`}</style>
-              )}
+              {cert.fullName}
+            </p>
 
-              <img
-                src={activeTemplate!}
-                alt="Template Sertifikat"
-                crossOrigin="anonymous"
-                className="w-full h-auto block"
-                style={{ display: 'block' }}
-              />
+            {/* ── Overlay: Kelas ── */}
+            <p
+              className="absolute font-serif text-center"
+              style={{
+                left: `${overlayConfig.kelas.left}%`,
+                top: `${overlayConfig.kelas.top}%`,
+                transform: 'translate(-50%, -50%)',
+                fontSize: `${overlayConfig.kelas.fontSize}cqw`,
+                color: overlayConfig.kelas.color,
+                maxWidth: '55%',
+                wordWrap: 'break-word',
+                lineHeight: 1.3,
+                ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
+              }}
+            >
+              {cert.classTitle}
+            </p>
 
-              {/* ── Overlay: Nama ── */}
-              <p
-                className="absolute font-serif font-bold text-center"
-                style={{
-                  left: `${overlayConfig.nama.left}%`,
-                  top: `${overlayConfig.nama.top}%`,
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: `${overlayConfig.nama.fontSize}cqw`,
-                  color: overlayConfig.nama.color,
-                  maxWidth: '60%',
-                  wordWrap: 'break-word',
-                  lineHeight: 1.2,
-                  ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-                }}
-              >
-                {cert.fullName}
-              </p>
-
-              {/* ── Overlay: Kelas ── */}
-              <p
-                className="absolute font-serif text-center"
-                style={{
-                  left: `${overlayConfig.kelas.left}%`,
-                  top: `${overlayConfig.kelas.top}%`,
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: `${overlayConfig.kelas.fontSize}cqw`,
-                  color: overlayConfig.kelas.color,
-                  maxWidth: '55%',
-                  wordWrap: 'break-word',
-                  lineHeight: 1.3,
-                  ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-                }}
-              >
-                {cert.classTitle}
-              </p>
-
-              {/* ── Overlay: Tanggal ── */}
-              <p
-                className="absolute text-center"
-                style={{
-                  left: `${overlayConfig.tanggal.left}%`,
-                  top: `${overlayConfig.tanggal.top}%`,
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: `${overlayConfig.tanggal.fontSize}cqw`,
-                  color: overlayConfig.tanggal.color,
-                  whiteSpace: 'nowrap',
-                  ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-                }}
-              >
-                {formatTanggal(cert.issuedAt)}
-              </p>
-            </div>
+            {/* ── Overlay: Tanggal ── */}
+            <p
+              className="absolute text-center"
+              style={{
+                left: `${overlayConfig.tanggal.left}%`,
+                top: `${overlayConfig.tanggal.top}%`,
+                transform: 'translate(-50%, -50%)',
+                fontSize: `${overlayConfig.tanggal.fontSize}cqw`,
+                color: overlayConfig.tanggal.color,
+                whiteSpace: 'nowrap',
+                ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
+              }}
+            >
+              {formatTanggal(cert.issuedAt)}
+            </p>
           </div>
 
-          {/* Badge verifikasi — DI LUAR certificateRef, tidak ikut ter-capture html2canvas */}
-          <div className="flex justify-center mt-3">
+          <div className="flex justify-center mt-3 no-print">
             <span className="rounded-full bg-muted text-muted-foreground text-xs px-3 py-1.5 inline-block">
               Verifikasi: markaz-fiqih.com/sertifikat/{cert.id}
             </span>
           </div>
-        </>
+        </div>
       ) : (
-        /* ── Mode Bawaan ─────────────────────────────────────────────── */
-        <div
-          ref={certificateRef}
-          className="bg-white flex items-center justify-center p-8 relative"
-          style={{
-            backgroundImage: 'url(/hero-pattern.png)',
-            backgroundRepeat: 'repeat',
-            backgroundSize: '320px',
-          }}
-        >
-          {/* Overlay putih supaya pattern tipis */}
+        /* ── Mode Bawaan Standard A4 Landscape (297 x 210 mm) ─────────────────── */
+        <div className="w-full max-w-5xl flex flex-col items-center">
           <div
-            className="absolute inset-0"
-            style={{ background: 'rgba(255,255,255,0.90)' }}
-          />
-
-          {/* Card sertifikat */}
-          <div
-            className="relative w-full max-w-4xl bg-white rounded-2xl overflow-hidden"
+            ref={certificateRef}
+            className="relative w-full aspect-[297/210] bg-white rounded-xl overflow-hidden flex flex-col justify-between p-[4%] text-center box-border shadow-2xl border-2 border-[#c8a96e]"
             style={{
-              boxShadow: '0 4px 40px rgba(0,0,0,0.13)',
-              border: '1.5px solid #c8a96e',
+              containerType: 'inline-size',
+              backgroundImage: 'url(/hero-pattern.png)',
+              backgroundRepeat: 'repeat',
+              backgroundSize: '240px',
             }}
           >
-            {/* Border dekoratif dalam */}
+            {/* Overlay tipis putih */}
             <div
-              className="absolute inset-3 rounded-xl pointer-events-none"
-              style={{ border: '1px solid #e8d5a3' }}
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'rgba(255,255,255,0.92)' }}
             />
 
-            {/* Konten */}
-            <div className="relative px-16 py-12 flex flex-col items-center text-center gap-6">
+            {/* Border ornamental dalam */}
+            <div
+              className="absolute inset-[12px] rounded-lg pointer-events-none"
+              style={{ border: '1.5px solid #e8d5a3' }}
+            />
 
-              {/* Logo */}
+            {/* Header: Logo & Title */}
+            <div className="relative z-10 flex flex-col items-center gap-[1.5cqw]">
               <img
                 src="/logo.png"
                 alt="Markaz Fiqih"
-                className="h-16 w-auto"
-                style={{ filter: 'brightness(0) saturate(100%) invert(20%) sepia(60%) saturate(400%) hue-rotate(5deg)' }}
+                className="h-[6cqw] w-auto object-contain"
               />
 
-              {/* Judul */}
-              <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-[0.3em] text-[#c8a96e]">
+              <div className="space-y-[0.3cqw]">
+                <p className="text-[1.2cqw] font-bold uppercase tracking-[0.3em] text-[#c8a96e]">
                   Markaz Fiqih
                 </p>
                 <h1
                   className="font-serif font-bold text-foreground"
-                  style={{ fontSize: '2.8rem', letterSpacing: '0.12em', lineHeight: 1 }}
+                  style={{ fontSize: '3.6cqw', letterSpacing: '0.12em', lineHeight: 1 }}
                 >
                   SERTIFIKAT
                 </h1>
-                <p className="text-sm text-muted-foreground tracking-widest uppercase">
+                <p className="text-[1.3cqw] text-muted-foreground tracking-widest uppercase font-medium">
                   Keikutsertaan Kelas
                 </p>
               </div>
+            </div>
 
-              {/* Divider ornamental */}
-              <div className="flex items-center gap-3 w-full max-w-sm">
-                <div className="flex-1 h-px bg-[#c8a96e]/50" />
-                <span className="text-[#c8a96e] text-lg">✦</span>
-                <div className="flex-1 h-px bg-[#c8a96e]/50" />
+            {/* Content: Recipient & Course */}
+            <div className="relative z-10 flex flex-col items-center my-[1cqw] gap-[1cqw]">
+              <div className="flex items-center gap-3 w-full max-w-xs opacity-70">
+                <div className="flex-1 h-px bg-[#c8a96e]" />
+                <span className="text-[#c8a96e] text-[1.5cqw]">✦</span>
+                <div className="flex-1 h-px bg-[#c8a96e]" />
               </div>
 
-              {/* Penerima */}
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Diberikan kepada</p>
+              <div className="space-y-[0.3cqw]">
+                <p className="text-[1.3cqw] text-muted-foreground">Diberikan kepada</p>
                 <p
                   className="font-serif font-bold text-foreground"
-                  style={{ fontSize: '2.2rem', lineHeight: 1.15 }}
+                  style={{ fontSize: '3.2cqw', lineHeight: 1.15 }}
                 >
                   {cert.fullName}
                 </p>
               </div>
 
-              {/* Kelas */}
-              <div className="space-y-1 max-w-lg">
-                <p className="text-sm text-muted-foreground">atas keikutsertaan dalam kelas</p>
-                <p className="font-serif text-xl font-semibold text-foreground leading-snug">
+              <div className="space-y-[0.2cqw] max-w-xl">
+                <p className="text-[1.2cqw] text-muted-foreground">atas keikutsertaan dalam kelas</p>
+                <p className="font-serif text-[2.2cqw] font-semibold text-foreground leading-snug">
                   {cert.classTitle}
                 </p>
               </div>
 
-              {/* Nilai (kalau ada) */}
               {cert.score && (
-                <div className="px-5 py-2 rounded-full border border-[#c8a96e]/40 bg-[#fdf8ee]">
-                  <p className="text-sm text-foreground">
-                    Nilai Soal Latihan:{' '}
+                <div className="px-4 py-1 rounded-full border border-[#c8a96e]/40 bg-[#fdf8ee]">
+                  <p className="text-[1.2cqw] text-foreground">
+                    Nilai Ujian / Latihan:{' '}
                     <span className="font-bold text-[#b8860b]">{cert.score}</span>
                   </p>
                 </div>
               )}
+            </div>
 
-              {/* Divider ornamental bawah */}
-              <div className="flex items-center gap-3 w-full max-w-sm">
-                <div className="flex-1 h-px bg-[#c8a96e]/50" />
-                <span className="text-[#c8a96e] text-lg">✦</span>
-                <div className="flex-1 h-px bg-[#c8a96e]/50" />
+            {/* Footer: Cert No & Date */}
+            <div className="relative z-10 w-full flex items-end justify-between text-[1.2cqw] text-muted-foreground pt-[1cqw] border-t border-[#c8a96e]/30">
+              <div className="text-left space-y-0.5">
+                <p className="uppercase tracking-wide font-semibold text-[0.9cqw]">
+                  Nomor Sertifikat
+                </p>
+                <p className="font-mono text-[1.3cqw] font-semibold text-foreground">
+                  {cert.certificateNumber}
+                </p>
               </div>
 
-              {/* Footer: nomor & tanggal */}
-              <div className="w-full flex items-end justify-between text-xs text-muted-foreground mt-2">
-                <div className="text-left space-y-0.5">
-                  <p className="uppercase tracking-wide font-semibold text-[10px]">
-                    Nomor Sertifikat
-                  </p>
-                  <p className="font-mono text-sm font-medium text-foreground">
-                    {cert.certificateNumber}
-                  </p>
-                </div>
-                <div className="text-center space-y-4">
-                  <p className="text-xs text-muted-foreground">
-                    Diterbitkan melalui platform Markaz Fiqih
-                  </p>
-                </div>
-                <div className="text-right space-y-0.5">
-                  <p className="uppercase tracking-wide font-semibold text-[10px]">
-                    Tanggal Terbit
-                  </p>
-                  <p className="text-sm font-medium text-foreground">
-                    {formatTanggal(cert.issuedAt)}
-                  </p>
-                </div>
+              <div className="text-center space-y-1">
+                <p className="text-[1.1cqw] text-muted-foreground italic">
+                  Diterbitkan melalui platform Kelas Markaz Fiqih
+                </p>
               </div>
 
+              <div className="text-right space-y-0.5">
+                <p className="uppercase tracking-wide font-semibold text-[0.9cqw]">
+                  Tanggal Terbit
+                </p>
+                <p className="text-[1.3cqw] font-semibold text-foreground">
+                  {formatTanggal(cert.issuedAt)}
+                </p>
+              </div>
             </div>
           </div>
         </div>

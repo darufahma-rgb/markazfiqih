@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
+import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
@@ -335,6 +336,7 @@ function DashboardContent() {
 
   return (
     <AppShell>
+      <SEO title="Dashboard — Kelas Markaz Fiqih" description="Dashboard area pembelajaran siswa Kelas Markaz Fiqih." />
       {/* Page header */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2 shrink-0">
         <motion.div

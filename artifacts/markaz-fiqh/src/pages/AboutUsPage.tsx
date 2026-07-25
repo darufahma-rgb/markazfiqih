@@ -224,7 +224,7 @@ export function AboutUsPage() {
                 Kelas Markaz Fiqih dirancang untuk memenuhi kebutuhan belajar masyarakat,
                 mulai dari pemula hingga penuntut ilmu yang ingin mendalami fiqih secara
                 akademis. Program ini diadakan dengan harapan bisa menjadi tempat belajar
-                fiqih madzhab Syafi'i yang rapi dan terstruktur.
+                fiqih madzhab Syafi'i yang sistematis dan terstruktur.
               </p>
               <p className="text-muted-foreground mt-2">Saat ini tersedia tiga program utama:</p>
 
