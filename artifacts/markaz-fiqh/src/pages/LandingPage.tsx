@@ -136,29 +136,29 @@ function HeroSection({
         style={{ opacity: 0.22, mixBlendMode: 'luminosity', maskImage: 'linear-gradient(to top, black 30%, transparent 85%), linear-gradient(to right, black 40%, transparent 100%)', maskComposite: 'intersect' }}
       />
 
-      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-6 sm:py-10">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-4 sm:py-6">
         {/* Top: Logo + Title + Buttons */}
-        <div className="flex flex-col items-center text-center my-auto pt-4 sm:pt-8">
+        <div className="flex flex-col items-center text-center my-auto pt-2 sm:pt-4">
 
-          {/* Logo Markaz Fiqih di atas Judul */}
+          {/* Logo Markaz Fiqih di atas Judul (Ukuran Dikecilkan Sedikit) */}
           <motion.img
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
             src="/logo.png"
             alt="Markaz Fiqih"
-            className="h-12 sm:h-16 lg:h-20 w-auto mb-5 brightness-0 invert"
+            className="h-8 sm:h-10 lg:h-12 w-auto mb-3 brightness-0 invert"
           />
 
-          {/* 1. Judul */}
-          <h1 className="font-serif font-bold leading-[1.15] tracking-tight max-w-4xl">
+          {/* 1. Judul (Objek Judul Dibesarkan) */}
+          <h1 className="font-serif font-bold leading-[1.12] tracking-tight max-w-4xl">
             <span
-              className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic"
+              className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic mb-1"
               style={{ color: 'hsl(var(--accent))' }}
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-4xl sm:text-6xl lg:text-7xl text-white mt-1">
+            <span className="block text-5xl sm:text-7xl lg:text-8xl font-extrabold text-white">
               Kelas Markaz Fiqih
             </span>
           </h1>
