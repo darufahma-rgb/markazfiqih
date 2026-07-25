@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   BookOpen,
   Download,
+  Sparkles,
+  Users,
 } from 'lucide-react';
 import { SEO } from '@/components/SEO';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -18,7 +20,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useQuery } from '@tanstack/react-query';
-import { listClasses, listInstructors, listEnrollments, listClassRatings, getSettings, listEbooksCatalog, listMyEbooks } from '@/lib/db';
+import { listClasses, listInstructors, listEnrollments, listClassRatings, getClassEnrollmentStats, getSettings, listEbooksCatalog, listMyEbooks } from '@/lib/db';
 import type { EbookCatalogItem } from '@/lib/db';
 import { StarRating } from '@/components/StarRating';
 import { Input } from '@/components/ui/input';
@@ -149,6 +151,7 @@ export type ClassSummary = {
   meetingCount: number | null;
   totalDurationMinutes: number | null;
   displayOrder?: number | null;
+  slug?: string;
 };
 
 // Bullet checkmark row — reused inside ClassCard checklist
@@ -163,8 +166,21 @@ function CheckItem({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ClassCard({ cls, index, enrolledClassIds = new Set<string>(), ratingsMap = {} }: { cls: ClassSummary; index: number; enrolledClassIds?: Set<string>; ratingsMap?: Record<string, { averageRating: number; totalReviews: number }> }) {
+export function ClassCard({
+  cls,
+  index,
+  enrolledClassIds = new Set<string>(),
+  ratingsMap = {},
+  enrollmentStatsMap = {},
+}: {
+  cls: ClassSummary;
+  index: number;
+  enrolledClassIds?: Set<string>;
+  ratingsMap?: Record<string, { averageRating: number; totalReviews: number }>;
+  enrollmentStatsMap?: Record<string, { enrolledCount: number; tag?: string }>;
+}) {
   const classRating = ratingsMap[cls.id];
+  const stat = enrollmentStatsMap[cls.id];
   const hasDiscount = cls.discountPrice != null;
   const durationLabel = formatDuration(cls.totalDurationMinutes);
   const { user } = useAuth();
@@ -204,15 +220,8 @@ export function ClassCard({ cls, index, enrolledClassIds = new Set<string>(), ra
       layout
       className="h-full"
     >
-      {/*
-       * Card container: group for hover effects; button is a sibling of Link,
-       * NOT nested inside it, to produce valid HTML (no interactive-in-interactive).
-       */}
       <div className="group h-full flex flex-col rounded-lg border border-border bg-card overflow-hidden shadow-sm hover:shadow-lg transition-friendly">
-
-        {/* Clickable area — image + content — navigates to class detail */}
-        <Link href={`/class/${cls.id}`} className="flex flex-col flex-1">
-
+        <Link href={`/kelas/${cls.slug ?? cls.id}`} className="flex flex-col flex-1">
           {/* Cover image */}
           <div className="relative aspect-video overflow-hidden bg-muted">
             <img
@@ -221,6 +230,15 @@ export function ClassCard({ cls, index, enrolledClassIds = new Set<string>(), ra
               loading="lazy"
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
+
+            {stat?.tag && !enrolledClassIds.has(cls.id) && (
+              <div className="absolute top-3 left-3">
+                <Badge className="bg-brand-gold text-slate-950 font-bold text-[10px] uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  {stat.tag}
+                </Badge>
+              </div>
+            )}
 
             {enrolledClassIds.has(cls.id) && (
               <div className="absolute top-3 right-3">
@@ -257,6 +275,7 @@ export function ClassCard({ cls, index, enrolledClassIds = new Set<string>(), ra
                 • meetingCount > 0 → playlist: tampilkan pertemuan + "Akses Selamanya"
                 • keduanya 0/null  → tampilkan pengajar saja, sembunyikan baris kosong
             */}
+            {/* Checkmark detail list */}
             <div className="flex flex-col gap-1.5">
               {/* Baris 1: Pengajar — selalu tampil */}
               <CheckItem>{cls.instructor.name}</CheckItem>
@@ -270,12 +289,17 @@ export function ClassCard({ cls, index, enrolledClassIds = new Set<string>(), ra
                   )}
                 </>
               ) : (cls.meetingCount ?? 0) > 0 ? (
-                <>
-                  {/* Kelas berbasis playlist YouTube */}
-                  <CheckItem>{cls.meetingCount} Pertemuan</CheckItem>
-                  <CheckItem>Akses Selamanya</CheckItem>
-                </>
+                <CheckItem>{cls.meetingCount} Pertemuan</CheckItem>
               ) : null}
+            </div>
+
+            {/* Social Proof: Real-time Participant Count */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
+              <span className="flex items-center gap-1.5 font-medium text-foreground/80">
+                <Users className="w-3.5 h-3.5 text-primary shrink-0" />
+                {stat?.enrolledCount ? `${stat.enrolledCount} Pelajar` : 'Baru Rilis'}
+              </span>
+              <span className="text-[11px] text-muted-foreground">Akses Selamanya</span>
             </div>
 
             {/* Price */}
@@ -560,18 +584,20 @@ function CategorySection({
   classes,
   enrolledClassIds,
   ratingsMap,
+  enrollmentStatsMap,
 }: {
   category: string;
   classes: ClassSummary[];
   enrolledClassIds: Set<string>;
   ratingsMap: Record<string, { averageRating: number; totalReviews: number }>;
+  enrollmentStatsMap?: Record<string, { enrolledCount: number; tag?: string }>;
 }) {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-foreground">{category}</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {classes.map((cls, idx) => (
-          <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} ratingsMap={ratingsMap} />
+          <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} ratingsMap={ratingsMap} enrollmentStatsMap={enrollmentStatsMap} />
         ))}
       </div>
     </div>
@@ -652,6 +678,13 @@ function CatalogContent() {
     staleTime: 5 * 60 * 1000,
   });
   const ratingsMap = ratingsQuery.data ?? {};
+
+  const enrollmentStatsQuery = useQuery({
+    queryKey: ['class-enrollment-stats'],
+    queryFn: getClassEnrollmentStats,
+    staleTime: 5 * 60 * 1000,
+  });
+  const enrollmentStatsMap = enrollmentStatsQuery.data ?? {};
 
   const classes = (classesQuery.data ?? []) as ClassSummary[];
   const rawInstructors = instructorsQuery.data ?? [];
@@ -867,6 +900,7 @@ function CatalogContent() {
                   classes={catClasses}
                   enrolledClassIds={enrolledClassIds}
                   ratingsMap={ratingsMap}
+                  enrollmentStatsMap={enrollmentStatsMap}
                 />
               ))}
             </div>
@@ -879,7 +913,7 @@ function CatalogContent() {
                   className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
                 >
                   {sortedClasses.map((cls, idx) => (
-                    <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} ratingsMap={ratingsMap} />
+                    <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} ratingsMap={ratingsMap} enrollmentStatsMap={enrollmentStatsMap} />
                   ))}
                 </motion.div>
               </AnimatePresence>

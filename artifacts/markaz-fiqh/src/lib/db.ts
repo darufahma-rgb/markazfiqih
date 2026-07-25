@@ -662,6 +662,39 @@ export async function removeCartItem(itemId: string) {
 
 // ─── ENROLLMENTS ──────────────────────────────────────────────────────────────
 
+export async function getClassEnrollmentStats(): Promise<Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' }>> {
+  const { data, error } = await supabase
+    .from('enrollments')
+    .select('class_id');
+
+  const counts: Record<string, number> = {};
+  if (!error && data) {
+    for (const item of data) {
+      if (item.class_id) {
+        counts[item.class_id] = (counts[item.class_id] || 0) + 1;
+      }
+    }
+  }
+
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const maxCount = entries.length > 0 ? entries[0][1] : 0;
+
+  const result: Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' }> = {};
+  for (const [classId, count] of Object.entries(counts)) {
+    let tag: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' | undefined;
+    if (count === maxCount && count >= 2) {
+      tag = 'Best Seller';
+    } else if (count >= 3) {
+      tag = 'Terpopuler';
+    } else if (count >= 1) {
+      tag = 'Paling Diminati';
+    }
+    result[classId] = { enrolledCount: count, tag };
+  }
+
+  return result;
+}
+
 export async function listEnrollments(userId: string): Promise<EnrollmentItem[]> {
   const { data, error } = await supabase
     .from('enrollments')

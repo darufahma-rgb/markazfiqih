@@ -32,7 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/data/mockClasses';
 import { useQuery } from '@tanstack/react-query';
-import { getClassById, listEnrollments } from '@/lib/db';
+import { getClassById, listEnrollments, getClassEnrollmentStats } from '@/lib/db';
 import { FacilitasCard } from '@/components/FacilitasCard';
 import { ClassReviewSection } from '@/components/ClassReviewSection';
 import { toast } from 'sonner';
@@ -140,6 +140,13 @@ export default function ClassDetailPage() {
   const { classIdsInCart, addToCart, isAdding } = useCart();
   const [, setLocation] = useLocation();
 
+  const enrollmentStatsQuery = useQuery({
+    queryKey: ['class-enrollment-stats'],
+    queryFn: getClassEnrollmentStats,
+    staleTime: 5 * 60 * 1000,
+  });
+  const enrollmentCount = enrollmentStatsQuery.data?.[cls?.id ?? '']?.enrolledCount ?? 0;
+
   useEffect(() => {
     if (cls && (window.location.pathname.startsWith('/class/') || id !== cls.slug)) {
       window.history.replaceState(null, '', `/kelas/${cls.slug}`);
@@ -242,6 +249,10 @@ export default function ClassDetailPage() {
                       </span>
                     </>
                   )}
+                  <span className="flex items-center gap-1.5 font-semibold text-primary">
+                    <Users className="w-4 h-4" />
+                    {enrollmentCount > 0 ? `${enrollmentCount} Pelajar Terdaftar` : 'Baru Rilis'}
+                  </span>
                   <span className="flex items-center gap-1.5">
                     <Infinity className="w-4 h-4" />
                     Akses seumur hidup
