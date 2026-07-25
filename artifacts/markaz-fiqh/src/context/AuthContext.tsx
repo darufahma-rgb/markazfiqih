@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (redirect?: string) => {
-    const destination = redirect && redirect !== '/' ? redirect : '/dashboard';
+    const destination = redirect && redirect !== '/' ? redirect : '/katalog';
     supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

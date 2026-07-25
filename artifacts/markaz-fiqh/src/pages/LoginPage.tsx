@@ -11,7 +11,7 @@ export default function LoginPage() {
 
   // Extract redirect url if available
   const searchParams = new URLSearchParams(window.location.search);
-  const redirectUrl = searchParams.get('redirect') || '/';
+  const redirectUrl = searchParams.get('redirect') || '/katalog';
 
   useEffect(() => {
     if (!isLoading && user) {

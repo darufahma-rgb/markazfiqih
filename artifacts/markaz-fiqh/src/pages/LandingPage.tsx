@@ -136,49 +136,29 @@ function HeroSection({
       />
 
       <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px]">
-        {/* Satu kolom, semua center */}
-        <div className="flex flex-col items-center text-center pt-14 pb-24 sm:pt-16 sm:pb-28 lg:pt-20 lg:pb-32">
+        {/* Satu kolom, semua center — padding compact agar tombol terlihat tanpa scroll */}
+        <div className="flex flex-col items-center text-center pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-14 lg:pb-20">
 
-          {/* 1. Logo Markaz Fiqih — menggantikan badge lokasi */}
-          <img
-            src="/logo.png"
-            alt="Markaz Fiqih"
-            className="h-20 sm:h-24 w-auto mb-10 brightness-0 invert"
-          />
-
-          {/* 2. Judul — dua baris, baris pertama gold (lebih kecil), baris kedua putih */}
+          {/* 1. Judul — persis sesuai permintaan */}
           <h1 className="font-serif font-bold leading-[1.15] tracking-tight max-w-4xl">
             <span
-              className="block text-3xl sm:text-4xl lg:text-5xl font-semibold italic"
+              className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic"
               style={{ color: 'hsl(var(--accent))' }}
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-6xl sm:text-7xl lg:text-8xl text-white mt-1">
+            <span className="block text-5xl sm:text-6xl lg:text-7xl text-white mt-1">
               Kelas Markaz Fiqih
             </span>
           </h1>
 
-          {/* 3. Paragraf deskripsi — max-w-2xl supaya enak dibaca saat di-center */}
-          <p className="text-white/70 text-lg sm:text-xl mt-8 leading-relaxed max-w-2xl">
-            Tempat belajar fiqih madzhab Syafi'i yang rapih dan terstruktur,
-            dibangun dan diajar langsung oleh guru-guru kompeten.
+          {/* 2. Deskripsi — persis sesuai permintaan */}
+          <p className="text-white/80 text-base sm:text-lg lg:text-xl mt-5 leading-relaxed max-w-2xl">
+            Tempat belajar fiqih madzhab Syafi'i yang sistematis dan terstruktur.
           </p>
 
-          {/* 4. Quote misi — dipindah ke alur utama, di bawah deskripsi */}
-          <div className="mt-7 flex flex-col items-center gap-2 max-w-sm">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent via-[hsl(var(--accent))]/60 to-transparent" />
-            <p className="font-serif text-base italic text-white/55 leading-relaxed text-center">
-              &ldquo;Membumikan Fiqih di Tiap Lini Kehidupan&rdquo;
-            </p>
-            <p className="text-xs font-medium text-white/35 tracking-widest uppercase">
-              Markaz Fiqih
-            </p>
-            <div className="h-px w-16 bg-gradient-to-r from-transparent via-[hsl(var(--accent))]/60 to-transparent" />
-          </div>
-
-          {/* 5. Dua tombol CTA — center, berdampingan */}
-          <div className="mt-8 flex flex-wrap justify-center items-center gap-3">
+          {/* 3. Dua tombol CTA — terlihat langsung tanpa scroll */}
+          <div className="mt-6 sm:mt-8 flex flex-wrap justify-center items-center gap-3">
             <motion.div
               className="inline-block"
               whileHover={{ scale: 1.02 }}
@@ -188,7 +168,7 @@ function HeroSection({
               <Button
                 asChild
                 size="lg"
-                className="h-[56px] px-10 text-base font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg"
+                className="h-[52px] px-8 text-base font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg"
                 style={{ backgroundColor: 'hsl(var(--accent))' }}
               >
                 <Link href="/katalog">Mulai Belajar</Link>
@@ -204,7 +184,7 @@ function HeroSection({
                 asChild
                 variant="ghost"
                 size="lg"
-                className="h-[56px] px-8 text-base font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/20"
+                className="h-[52px] px-7 text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25"
               >
                 <Link href="/katalog">
                   Lihat Kelas Tersedia

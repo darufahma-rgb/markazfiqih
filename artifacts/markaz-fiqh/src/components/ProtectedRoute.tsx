@@ -6,7 +6,7 @@ import { LogIn } from 'lucide-react';
 import { Navbar } from '@/components/Navbar';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, login } = useAuth();
   const [location] = useLocation();
 
   if (isLoading) {
@@ -63,11 +63,13 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
             Masuk sebentar untuk lanjut menjelajahi kelas-kelas fiqih pilihanmu.
           </p>
 
-          <Button asChild className="w-full h-12 text-base shadow-md shadow-primary/20" size="lg">
-            <Link href={`/login?redirect=${encodeURIComponent(location)}`}>
-              <LogIn className="h-4 w-4 mr-2" />
-              Masuk dengan Google
-            </Link>
+          <Button
+            onClick={() => login(location)}
+            className="w-full h-12 text-base shadow-md shadow-primary/20"
+            size="lg"
+          >
+            <LogIn className="h-4 w-4 mr-2" />
+            Masuk dengan Google
           </Button>
 
           <p className="text-xs text-muted-foreground/70 mt-4">
