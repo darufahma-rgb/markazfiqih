@@ -694,7 +694,7 @@ export async function removeCartItem(itemId: string) {
 
 // ─── ENROLLMENTS ──────────────────────────────────────────────────────────────
 
-export async function getClassEnrollmentStats(): Promise<Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' }>> {
+export async function getClassEnrollmentStats(): Promise<Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' }>> {
   // ── 1. Fetch semua kelas beserta harganya ──────────────────────────────────
   const { data: classesData } = await supabase
     .from('classes')
@@ -823,15 +823,13 @@ export async function getClassEnrollmentStats(): Promise<Record<string, { enroll
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const maxCount = entries.length > 0 ? entries[0][1] : 0;
 
-  const result: Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' }> = {};
+  const result: Record<string, { enrolledCount: number; tag?: 'Terpopuler' | 'Best Seller' }> = {};
   for (const [classId, count] of entries) {
-    let tag: 'Terpopuler' | 'Best Seller' | 'Paling Diminati' | undefined;
+    let tag: 'Terpopuler' | 'Best Seller' | undefined;
     if (count === maxCount && count >= 5) {
       tag = 'Best Seller';
     } else if (count >= 15) {
       tag = 'Terpopuler';
-    } else if (count >= 8) {
-      tag = 'Paling Diminati';
     }
     result[classId] = { enrolledCount: count, tag };
   }
