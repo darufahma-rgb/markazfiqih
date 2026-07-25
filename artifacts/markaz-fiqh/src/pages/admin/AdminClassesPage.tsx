@@ -1758,7 +1758,7 @@ export default function AdminClassesPage() {
         <AutoMatchPlaylistDialog
           open={autoMatchOpen}
           onClose={() => setAutoMatchOpen(false)}
-          darsList={editingClassDetail.modules.flatMap((m) =>
+          darsList={editingClassDetail.modules.flatMap((m: any) =>
             m.dars.map((d: { id: string; title: string }) => ({ id: d.id, title: d.title, moduleTitle: m.title })),
           )}
           onApplied={() => {

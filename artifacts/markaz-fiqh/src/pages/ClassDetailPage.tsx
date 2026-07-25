@@ -343,7 +343,7 @@ export default function ClassDetailPage() {
                 ) : (
                   /* Normal mode: module/dars accordion */
                   <Accordion type="multiple" className="space-y-2">
-                    {cls.modules.map((mod, modIdx) => (
+                    {cls.modules.map((mod: any, modIdx: number) => (
                       <AccordionItem
                         key={mod.id}
                         value={mod.id}

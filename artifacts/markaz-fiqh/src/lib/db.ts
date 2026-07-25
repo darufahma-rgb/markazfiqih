@@ -72,6 +72,11 @@ export type CartItem = CartClassItem | CartBundleItem | CartEbookItem;
 
 // ─── CLASSES ─────────────────────────────────────────────────────────────────
 
+// In-memory cache untuk getClassById — batas 90 detik agar data segar
+const classDetailCache = new Map<string, { data: any; ts: number }>();
+const CLASS_CACHE_TTL = 90_000; // 90 seconds
+
+
 export async function listClasses(params?: {
   search?: string;
   category?: string;
@@ -139,24 +144,34 @@ export function slugify(text: string): string {
 }
 
 export async function getClassById(idOrSlug: string) {
-  let targetId = idOrSlug;
+  // ── Cache hit: kembalikan data langsung jika belum kadaluarsa ──────────────
+  const cached = classDetailCache.get(idOrSlug);
+  if (cached && Date.now() - cached.ts < CLASS_CACHE_TTL) return cached.data;
+
   const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(idOrSlug);
 
+  // ── Resolve slug → ID (hanya jika parameter bukan UUID) ───────────────────
+  let targetId = idOrSlug;
   if (!isUuid) {
-    const { data: allClasses } = await supabase.from('classes').select('id, title');
+    // Fetch hanya id + title untuk mapping slug — jauh lebih ringan
+    const { data: allClasses } = await supabase
+      .from('classes')
+      .select('id, title')
+      .eq('status', 'published');
     if (allClasses) {
       const match = allClasses.find((c) => slugify(c.title) === idOrSlug.toLowerCase());
-      if (match) {
-        targetId = match.id;
-      }
+      if (match) targetId = match.id;
     }
   }
 
+  // ── Fetch class detail ─────────────────────────────────────────────────────
   const { data, error } = await supabase
     .from('classes')
     .select(`
       id, title, description, cover_image, base_price, discount_price,
-      status, level, category, youtube_playlist_id, gdrive_materi_url, wa_group_url, soal_latihan_url, ebook_url, testimoni_form_url, meeting_count, display_order, reverse_video_order, certificate_template_url,
+      status, level, category, youtube_playlist_id, gdrive_materi_url, wa_group_url,
+      soal_latihan_url, ebook_url, testimoni_form_url, meeting_count, display_order,
+      reverse_video_order, certificate_template_url, instructor_id,
       related_ebook_id, ebooks:related_ebook_id ( id, title, cover_image ),
       instructors ( id, name, photo_url, bio ),
       modules (
@@ -168,23 +183,24 @@ export async function getClassById(idOrSlug: string) {
     .single();
   if (error) throw error;
 
-  const inst = data.instructors as any;
-  const rawModules = (data.modules ?? []) as any[];
+  const inst = (data as any).instructors as any;
+  const rawModules = ((data as any).modules ?? []) as any[];
 
-  // Hitung jumlah kelas published milik instruktur ini
-  let instructorClassCount = 0;
-  if (inst?.id) {
-    const { count } = await supabase
-      .from('classes')
-      .select('id', { count: 'exact', head: true })
-      .eq('instructor_id', inst.id)
-      .eq('status', 'published');
-    instructorClassCount = count ?? 0;
-  }
+  // Hitung jumlah kelas instruktur — start promise SEBELUM build modules
+  // sehingga keduanya berjalan secara paralel
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const instructorClassCountPromise: Promise<any> = inst?.id
+    ? (supabase
+        .from('classes')
+        .select('id', { count: 'exact', head: true })
+        .eq('instructor_id', inst.id)
+        .eq('status', 'published') as unknown as Promise<{ count: number | null }>)
+    : Promise.resolve({ count: 0 });
+
 
   const modules = rawModules
-    .sort((a, b) => a.order_index - b.order_index)
-    .map((m) => {
+    .sort((a: any, b: any) => a.order_index - b.order_index)
+    .map((m: any) => {
       const darsSorted = (m.dars ?? []).sort(
         (a: any, b: any) => a.order_index - b.order_index,
       );
@@ -207,43 +223,53 @@ export async function getClassById(idOrSlug: string) {
       };
     });
 
-  return {
-    id: data.id as string,
-    slug: slugify(data.title as string),
-    title: data.title as string,
-    description: data.description as string,
-    coverImage: data.cover_image as string,
-    basePrice: data.base_price as number,
-    discountPrice: data.discount_price as number | null,
-    status: data.status as 'draft' | 'published',
-    level: data.level as string | null,
-    category: data.category as string | null,
-    youtubePlaylistId: data.youtube_playlist_id as string | null,
-    gdriveMateriUrl: data.gdrive_materi_url as string | null,
-    waGroupUrl: data.wa_group_url as string | null,
-    soalLatihanUrl: data.soal_latihan_url as string | null,
-    ebookUrl: data.ebook_url as string | null,
-    relatedEbook: data.ebooks
+  // Tunggu count instruktur (sudah mulai di atas, biasanya selesai bersamaan)
+  const { count: instructorClassCount = 0 } = await instructorClassCountPromise;
+
+  const result = {
+    id: (data as any).id as string,
+    slug: slugify((data as any).title as string),
+    title: (data as any).title as string,
+    description: (data as any).description as string,
+    coverImage: (data as any).cover_image as string,
+    basePrice: (data as any).base_price as number,
+    discountPrice: (data as any).discount_price as number | null,
+    status: (data as any).status as 'draft' | 'published',
+    level: (data as any).level as string | null,
+    category: (data as any).category as string | null,
+    youtubePlaylistId: (data as any).youtube_playlist_id as string | null,
+    gdriveMateriUrl: (data as any).gdrive_materi_url as string | null,
+    waGroupUrl: (data as any).wa_group_url as string | null,
+    soalLatihanUrl: (data as any).soal_latihan_url as string | null,
+    ebookUrl: (data as any).ebook_url as string | null,
+    relatedEbook: (data as any).ebooks
       ? {
-          id: (data.ebooks as any).id as string,
-          title: (data.ebooks as any).title as string,
-          coverImage: (data.ebooks as any).cover_image as string | null,
+          id: ((data as any).ebooks as any).id as string,
+          title: ((data as any).ebooks as any).title as string,
+          coverImage: ((data as any).ebooks as any).cover_image as string | null,
         }
       : null,
-    testimoniFormUrl: data.testimoni_form_url as string | null,
-    displayOrder: (data.display_order ?? 0) as number,
-    reverseVideoOrder: (data.reverse_video_order ?? false) as boolean,
+    testimoniFormUrl: (data as any).testimoni_form_url as string | null,
+    displayOrder: ((data as any).display_order ?? 0) as number,
+    reverseVideoOrder: ((data as any).reverse_video_order ?? false) as boolean,
     instructor: inst
-      ? { id: inst.id, name: inst.name, photoUrl: inst.photo_url, bio: inst.bio ?? '', classCount: instructorClassCount }
+      ? { id: inst.id, name: inst.name, photoUrl: inst.photo_url, bio: inst.bio ?? '', classCount: instructorClassCount ?? 0 }
       : { id: '', name: 'Pengajar', photoUrl: '', bio: '', classCount: 0 },
     modules,
     moduleCount: modules.length,
-    meetingCount: (data.meeting_count ?? null) as number | null,
-    certificateTemplateUrl: (data.certificate_template_url as string | null) ?? null,
+    meetingCount: ((data as any).meeting_count ?? null) as number | null,
+    certificateTemplateUrl: ((data as any).certificate_template_url as string | null) ?? null,
     totalDurationMinutes: modules
       .flatMap((m) => m.dars)
       .reduce((acc, d) => acc + (d.durationMinutes ?? 0), 0),
   };
+
+  // Simpan ke cache dengan dua key: ID asli dan slug agar keduanya hit cache
+  classDetailCache.set(idOrSlug, { data: result, ts: Date.now() });
+  classDetailCache.set(result.id, { data: result, ts: Date.now() });
+  classDetailCache.set(result.slug, { data: result, ts: Date.now() });
+
+  return result;
 }
 
 // ─── INSTRUCTORS ──────────────────────────────────────────────────────────────
