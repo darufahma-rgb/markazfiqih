@@ -57,53 +57,14 @@ export { formatPrice, formatDuration };
 
 // ── Header ───────────────────────────────────────────────────────────────
 function CatalogHeader() {
-  const { user } = useAuth();
-  const { count } = useCart();
   return (
-    <div className="flex items-center justify-between px-4 lg:px-10 pt-6 lg:pt-8 pb-2">
-      <h1 className="font-serif text-xl lg:text-[32px] font-bold text-foreground leading-tight">
-        Jelajahi Kelas
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl pt-6 lg:pt-8 pb-2">
+      <h1 className="font-serif text-3xl lg:text-4xl font-bold text-foreground">
+        Katalog Kelas
       </h1>
-      <div className="flex items-center gap-3">
-        {user && (
-          <Link
-            href="/keranjang"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-friendly"
-            aria-label="Keranjang"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            <AnimatePresence>
-              {count > 0 && (
-                <motion.span
-                  key={count}
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.5, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                  className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-[hsl(var(--accent))] px-1 text-[10px] font-bold leading-none text-white"
-                >
-                  {count > 9 ? '9+' : count}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </Link>
-        )}
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
-          <NotificationBell />
-        </motion.div>
-        <Avatar className="h-9 w-9 border border-border">
-          {user ? (
-            <>
-              <AvatarImage src={user.avatar_url} alt={user.name} />
-              <AvatarFallback className="bg-primary/10 text-primary">
-                {user.name.split(' ').map((n) => n[0]).join('').substring(0, 2)}
-              </AvatarFallback>
-            </>
-          ) : (
-            <AvatarFallback className="bg-muted text-muted-foreground">?</AvatarFallback>
-          )}
-        </Avatar>
-      </div>
+      <p className="text-sm text-muted-foreground mt-1.5">
+        Jelajahi daftar kelas fiqih madzhab Syafi'i yang sistematis dan terstruktur.
+      </p>
     </div>
   );
 }
@@ -761,7 +722,7 @@ function CatalogContent() {
     <AppShell>
       <SEO title="Katalog" />
       <CatalogHeader />
-      <main className="px-4 lg:px-10 py-6 lg:py-8 max-w-[1400px]">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-6 lg:py-8 space-y-6">
 
         {/* Search + filters */}
         <div className="flex flex-col md:flex-row gap-3 mb-4">

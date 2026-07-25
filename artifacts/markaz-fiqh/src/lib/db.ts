@@ -129,7 +129,29 @@ export async function listClasses(params?: {
   });
 }
 
-export async function getClassById(id: string) {
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export async function getClassById(idOrSlug: string) {
+  let targetId = idOrSlug;
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(idOrSlug);
+
+  if (!isUuid) {
+    const { data: allClasses } = await supabase.from('classes').select('id, title');
+    if (allClasses) {
+      const match = allClasses.find((c) => slugify(c.title) === idOrSlug.toLowerCase());
+      if (match) {
+        targetId = match.id;
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('classes')
     .select(`
@@ -142,7 +164,7 @@ export async function getClassById(id: string) {
         dars ( id, title, duration_minutes, order_index, youtube_video_id )
       )
     `)
-    .eq('id', id)
+    .eq('id', targetId)
     .single();
   if (error) throw error;
 
@@ -187,6 +209,7 @@ export async function getClassById(id: string) {
 
   return {
     id: data.id as string,
+    slug: slugify(data.title as string),
     title: data.title as string,
     description: data.description as string,
     coverImage: data.cover_image as string,
@@ -1479,11 +1502,24 @@ export async function listActiveInstructors(): Promise<PublicInstructor[]> {
   }));
 }
 
-export async function getInstructorWithClasses(id: string): Promise<InstructorWithClasses | null> {
+export async function getInstructorWithClasses(idOrSlug: string): Promise<InstructorWithClasses | null> {
+  let targetId = idOrSlug;
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(idOrSlug);
+
+  if (!isUuid) {
+    const { data: allInstructors } = await supabase.from('instructors').select('id, name');
+    if (allInstructors) {
+      const match = allInstructors.find((i) => slugify(i.name) === idOrSlug.toLowerCase());
+      if (match) {
+        targetId = match.id;
+      }
+    }
+  }
+
   const { data: instructor, error } = await supabase
     .from('instructors')
     .select('id, name, bio, detailed_bio, photo_url')
-    .eq('id', id)
+    .eq('id', targetId)
     .eq('is_active', true)
     .maybeSingle();
   if (error) throw error;
@@ -1492,7 +1528,7 @@ export async function getInstructorWithClasses(id: string): Promise<InstructorWi
   const { data: classes, error: classesError } = await supabase
     .from('classes')
     .select('id, title, cover_image, category')
-    .eq('instructor_id', id)
+    .eq('instructor_id', instructor.id)
     .eq('status', 'published')
     .order('display_order');
   if (classesError) throw classesError;

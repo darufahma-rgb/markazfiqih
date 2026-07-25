@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getInstructorWithClasses, getInstructorOverallRating } from '@/lib/db';
+import { SEO } from '@/components/SEO';
+import { slugify, getInstructorWithClasses, getInstructorOverallRating } from '@/lib/db';
 import { StarRating } from '@/components/StarRating';
+import { useEffect } from 'react';
 
 function DetailSkeleton() {
   return (
@@ -49,8 +51,18 @@ function InstructorDetailContent({ id }: { id: string }) {
     enabled: !!id,
   });
 
+  useEffect(() => {
+    if (instructor) {
+      const slug = slugify(instructor.name);
+      if (id !== slug) {
+        window.history.replaceState(null, '', `/pengajar/${slug}`);
+      }
+    }
+  }, [instructor, id]);
+
   return (
     <AppShell>
+      <SEO title={instructor ? `Pengajar: ${instructor.name}` : 'Pengajar'} />
       <div className="max-w-4xl mx-auto w-full px-4 lg:px-8 py-8 space-y-8">
         {/* Back */}
         <Link

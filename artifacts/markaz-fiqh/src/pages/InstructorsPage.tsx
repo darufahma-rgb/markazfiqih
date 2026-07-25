@@ -28,14 +28,14 @@ function InstructorsContent() {
   return (
     <AppShell>
       <SEO title="Pengajar" />
-      <div className="max-w-5xl mx-auto w-full px-4 lg:px-8 py-8 space-y-6">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-6 lg:py-8 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="font-serif text-2xl lg:text-3xl font-bold text-foreground">
+          <h1 className="font-serif text-3xl lg:text-4xl font-bold text-foreground">
             Pengajar
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Kenali guru-guru kompeten di balik kelas-kelas Markaz Fiqih.
+          <p className="text-sm text-muted-foreground mt-1.5">
+            Kenali pengajar dan asatidz kompeten di balik kelas-kelas Markaz Fiqih.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ function InstructorsContent() {
             ))}
           </div>
         )}
-      </div>
+      </main>
     </AppShell>
   );
 }

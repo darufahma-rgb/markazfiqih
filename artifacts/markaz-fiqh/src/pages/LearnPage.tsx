@@ -57,6 +57,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { FacilitasCard } from '@/components/FacilitasCard';
 import { ClassReviewSection } from '@/components/ClassReviewSection';
 import { Button } from '@/components/ui/button';
+import { SEO } from '@/components/SEO';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
@@ -1280,6 +1281,12 @@ function LearnContent() {
     enabled: !!classId,
   });
 
+  useEffect(() => {
+    if (classDetail && (window.location.pathname.startsWith('/learn/') || classId !== classDetail.slug)) {
+      window.history.replaceState(null, '', `/belajar/${classDetail.slug}`);
+    }
+  }, [classDetail, classId]);
+
   // modules langsung dari classDetail — tidak perlu query terpisah
   const modules = classDetail?.modules ?? [];
 
@@ -1482,6 +1489,7 @@ function LearnContent() {
   // ── Normal mode: existing modul/dars breakdown ────────────────────────────────
   return (
     <AppShell>
+      <SEO title={classDetail ? `Belajar: ${classDetail.title}` : 'Belajar'} />
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Sidebar — di desktop tampil di kiri, di mobile tampil di bawah konten */}
         <div className="order-2 lg:order-1 w-full lg:w-auto">

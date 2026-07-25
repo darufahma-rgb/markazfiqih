@@ -62,6 +62,7 @@ function Router() {
 
       {/* Halaman umum & privat — wajib login */}
       <Route path="/katalog">{() => <P><CatalogPage /></P>}</Route>
+      <Route path="/kelas/:id">{() => <P><ClassDetailPage /></P>}</Route>
       <Route path="/class/:id">{() => <P><ClassDetailPage /></P>}</Route>
       <Route path="/paket-bundle">{() => <P><BundlesPage /></P>}</Route>
       <Route path="/pengajar">{() => <P><InstructorsPage /></P>}</Route>
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/dashboard">{() => <P><DashboardPage /></P>}</Route>
       <Route path="/my-classes">{() => <P><MyClassesPage /></P>}</Route>
       <Route path="/keranjang">{() => <P><CartPage /></P>}</Route>
+      <Route path="/belajar/:classId">{() => <P><LearnPage /></P>}</Route>
       <Route path="/learn/:classId">{() => <P><LearnPage /></P>}</Route>
       <Route path="/ebook-saya">{() => <P><MyEbooksPage /></P>}</Route>
       <Route path="/checkout">{() => <P><CheckoutPage /></P>}</Route>

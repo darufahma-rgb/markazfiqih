@@ -20,41 +20,14 @@ import { AppShell } from '@/components/AppShell';
 // ── Header ────────────────────────────────────────────────────────────────────
 
 function BundlesHeader() {
-  const { user } = useAuth();
-  const { count } = useCart();
   return (
-    <div className="flex items-center justify-between px-4 lg:px-10 pt-6 lg:pt-8 pb-2">
-      <div>
-        <h1 className="font-serif text-xl lg:text-[32px] font-bold text-foreground leading-tight">
-          Paket Bundle
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Beli beberapa kelas sekaligus dengan harga lebih hemat
-        </p>
-      </div>
-      {user && (
-        <Link
-          href="/keranjang"
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-friendly"
-          aria-label="Keranjang"
-        >
-          <ShoppingCart className="h-5 w-5" />
-          <AnimatePresence>
-            {count > 0 && (
-              <motion.span
-                key={count}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground"
-              >
-                {count > 9 ? '9+' : count}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </Link>
-      )}
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl pt-6 lg:pt-8 pb-2">
+      <h1 className="font-serif text-3xl lg:text-4xl font-bold text-foreground">
+        Paket Bundle
+      </h1>
+      <p className="text-sm text-muted-foreground mt-1.5">
+        Dapatkan beberapa kelas sekaligus dengan harga paket yang lebih hemat.
+      </p>
     </div>
   );
 }
@@ -282,7 +255,7 @@ function BundlesContent() {
     <AppShell>
       <SEO title="Paket Bundle" />
       <BundlesHeader />
-      <main className="px-6 lg:px-10 py-8 max-w-[1400px]">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-6 lg:py-8 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {isLoading && Array.from({ length: 3 }).map((_, i) => <BundleCardSkeleton key={i} />)}
 

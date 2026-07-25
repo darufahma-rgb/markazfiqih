@@ -296,12 +296,13 @@ function MyClassesContent() {
     <AppShell>
       <SEO title="Kelas Saya" />
       {/* Page header */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-2 shrink-0">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="font-serif text-3xl lg:text-4xl font-bold text-foreground">Kelas Saya</h1>
-        </motion.div>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl pt-6 lg:pt-8 pb-2">
+        <h1 className="font-serif text-3xl lg:text-4xl font-bold text-foreground">Kelas Saya</h1>
+        <p className="text-sm text-muted-foreground mt-1.5">
+          Daftar kelas fiqih yang sedang dan telah Anda pelajari.
+        </p>
       </div>
-      <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-8 lg:py-10">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-6 lg:py-8 space-y-6">
 
         {/* Search */}
         <div className="relative mb-4">

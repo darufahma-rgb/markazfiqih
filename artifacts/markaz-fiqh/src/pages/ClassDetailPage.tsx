@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -17,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -139,6 +140,12 @@ export default function ClassDetailPage() {
   const { classIdsInCart, addToCart, isAdding } = useCart();
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    if (cls && (window.location.pathname.startsWith('/class/') || id !== cls.slug)) {
+      window.history.replaceState(null, '', `/kelas/${cls.slug}`);
+    }
+  }, [cls, id]);
+
   if (isLoading) return <ClassDetailLoading />;
   if (isError || !cls || cls.status !== 'published') return <ClassNotFound />;
 
@@ -168,6 +175,7 @@ export default function ClassDetailPage() {
 
   return (
     <AppShell>
+      <SEO title={cls.title} description={cls.description} />
       <main className="flex-1 pb-20 lg:pb-0">
         {/* ── Breadcrumb ── */}
         <div className="border-b bg-muted/30">
