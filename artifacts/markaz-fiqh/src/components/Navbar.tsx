@@ -69,15 +69,12 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
             </Link>
           </div>
 
-          {/* Tengah: Mobile Logo + kelasmarkazfiqih.com */}
+          {/* Tengah: Mobile Logo Saja */}
           <Link
             href="/"
-            className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 transition-opacity hover:opacity-90 max-w-[65%] overflow-hidden"
+            className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center transition-opacity hover:opacity-90"
           >
-            <img src="/logo.png" alt="Markaz Fiqih" className="h-5 w-auto shrink-0 brightness-0 invert" />
-            <span className="text-[11px] sm:text-xs font-semibold tracking-tight text-white/95 truncate">
-              kelasmarkazfiqih.com
-            </span>
+            <img src="/logo.png" alt="Markaz Fiqih" className="h-7 w-auto shrink-0 brightness-0 invert" />
           </Link>
 
           {/* Menu desktop — center absolut (tersembunyi di mobile) */}

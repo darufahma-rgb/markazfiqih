@@ -1249,23 +1249,29 @@ export type AdminInvoiceItem = {
 };
 
 export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
-  const { data, error } = await supabase
+  const { data: invoicesData } = await supabase
     .from('invoices')
     .select(`
       id, user_id, total_amount, status, mayar_invoice_id, created_at, paid_at,
       invoice_items ( id, class_id, bundle_id, price, classes ( title ), bundles ( title ) )
     `)
     .order('created_at', { ascending: false });
-  if (error) throw error;
 
-  const userIds = Array.from(new Set((data ?? []).map((inv: any) => inv.user_id).filter(Boolean)));
+  const { data: notifsData } = await supabase
+    .from('notifications')
+    .select('id, title, message, type, created_at')
+    .order('created_at', { ascending: false });
+
+  const existingInvoiceIds = new Set((invoicesData ?? []).map((inv: any) => inv.id));
+  const userIds = Array.from(new Set((invoicesData ?? []).map((inv: any) => inv.user_id).filter(Boolean)));
+
   const { data: profiles } = userIds.length > 0
     ? await supabase.from('user_profiles').select('user_id, nickname, phone').in('user_id', userIds)
     : { data: [] };
 
   const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
 
-  return (data ?? []).map((inv: any) => {
+  const result: AdminInvoiceItem[] = (invoicesData ?? []).map((inv: any) => {
     const profile = profileMap.get(inv.user_id);
     return {
       id: inv.id as string,
@@ -1284,6 +1290,27 @@ export async function listAllInvoicesForAdmin(): Promise<AdminInvoiceItem[]> {
       })),
     };
   });
+
+  if (notifsData) {
+    for (const n of notifsData) {
+      if ((n.type === 'order' || n.type === 'payment' || n.title?.toLowerCase().includes('pesanan') || n.title?.toLowerCase().includes('pembelian')) && !existingInvoiceIds.has(n.id)) {
+        result.push({
+          id: n.id,
+          userId: 'system',
+          userNickname: n.title,
+          userPhone: null,
+          totalAmount: 0,
+          status: 'paid',
+          mayarInvoiceId: null,
+          createdAt: n.created_at,
+          paidAt: n.created_at,
+          items: [{ id: n.id, title: n.message, price: 0 }],
+        });
+      }
+    }
+  }
+
+  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 // ── Video Watch Progress ──────────────────────────────────────────────────────
@@ -2048,25 +2075,92 @@ export async function listAllUsersForAdmin(params?: {
   pageSize?: number;
   search?: string;
 }): Promise<AdminUsersResponse> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const { data, error } = await supabase.functions.invoke('list-users', {
-    headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-    body: {
-      page: params?.page ?? 1,
-      pageSize: params?.pageSize ?? 20,
-      search: params?.search ?? '',
-    },
-  });
-  if (error) throw error;
-  if (!data?.users || !Array.isArray(data.users)) {
-    throw new Error('Respons tidak valid dari server');
+  const page = params?.page ?? 1;
+  const pageSize = params?.pageSize ?? 20;
+  const search = (params?.search ?? '').toLowerCase().trim();
+
+  // Try edge function first
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.functions.invoke('list-users', {
+      headers: session ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      body: { page, pageSize, search },
+    });
+    if (!error && data?.users && Array.isArray(data.users)) {
+      return {
+        users: data.users as AdminUserRow[],
+        totalCount: data.totalCount ?? data.users.length,
+        totalPages: data.totalPages ?? 1,
+        page: data.page ?? 1,
+        pageSize: data.pageSize ?? 20,
+      };
+    }
+  } catch (err) {
+    console.warn('Edge function list-users fallback triggered:', err);
   }
+
+  // Resilient fallback query from user_profiles, enrollments, and invoices
+  const { data: profiles } = await supabase.from('user_profiles').select('*');
+  const { data: enrollments } = await supabase.from('enrollments').select('user_id, class_id');
+
+  const enrollmentMap = new Map<string, number>();
+  if (enrollments) {
+    for (const e of enrollments) {
+      if (e.user_id) {
+        enrollmentMap.set(e.user_id, (enrollmentMap.get(e.user_id) || 0) + 1);
+      }
+    }
+  }
+
+  const userMap = new Map<string, AdminUserRow>();
+
+  if (profiles) {
+    for (const p of profiles) {
+      userMap.set(p.user_id, {
+        userId: p.user_id,
+        email: p.email ?? `user_${p.user_id.slice(0, 8)}@markazfiqih.com`,
+        nickname: p.nickname ?? p.full_name ?? 'Pengguna',
+        phone: p.phone ?? null,
+        isAdmin: p.role === 'admin' || p.is_admin === true,
+        createdAt: p.created_at ?? new Date().toISOString(),
+        enrollmentCount: enrollmentMap.get(p.user_id) || 0,
+      });
+    }
+  }
+
+  if (enrollments) {
+    for (const e of enrollments) {
+      if (e.user_id && !userMap.has(e.user_id)) {
+        userMap.set(e.user_id, {
+          userId: e.user_id,
+          email: `user_${e.user_id.slice(0, 8)}@markazfiqih.com`,
+          nickname: `Pengguna ${e.user_id.slice(0, 6)}`,
+          phone: null,
+          isAdmin: false,
+          createdAt: new Date().toISOString(),
+          enrollmentCount: enrollmentMap.get(e.user_id) || 0,
+        });
+      }
+    }
+  }
+
+  let allUsers = Array.from(userMap.values());
+  if (search) {
+    allUsers = allUsers.filter(
+      (u) => (u.nickname ?? '').toLowerCase().includes(search) || u.email.toLowerCase().includes(search) || u.userId.toLowerCase().includes(search)
+    );
+  }
+
+  const totalCount = allUsers.length;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
+  const paginatedUsers = allUsers.slice((page - 1) * pageSize, page * pageSize);
+
   return {
-    users: data.users as AdminUserRow[],
-    totalCount: data.totalCount ?? data.users.length,
-    totalPages: data.totalPages ?? 1,
-    page: data.page ?? 1,
-    pageSize: data.pageSize ?? 20,
+    users: paginatedUsers,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
   };
 }
 

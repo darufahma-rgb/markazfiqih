@@ -108,15 +108,15 @@ type TestimonialItem = {
 // ────────────────────────────────────────────────────────────────────────────
 function HeroSection({
   socialLinks: _socialLinks,
-  totalClasses: _totalClasses,
-  studentCountLabel: _studentCountLabel,
+  totalClasses,
+  studentCountLabel,
 }: {
   socialLinks: Array<{ label: string; icon: typeof Instagram | typeof TikTokIcon; href: string }>;
   totalClasses: number;
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))]">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-dvh flex flex-col justify-between pt-16">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -136,11 +136,21 @@ function HeroSection({
         style={{ opacity: 0.22, mixBlendMode: 'luminosity', maskImage: 'linear-gradient(to top, black 30%, transparent 85%), linear-gradient(to right, black 40%, transparent 100%)', maskComposite: 'intersect' }}
       />
 
-      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px]">
-        {/* Satu kolom, semua center — padding compact agar tombol terlihat tanpa scroll */}
-        <div className="flex flex-col items-center text-center pt-8 pb-12 sm:pt-12 sm:pb-16 lg:pt-14 lg:pb-20">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-6 sm:py-10">
+        {/* Top: Logo + Title + Buttons */}
+        <div className="flex flex-col items-center text-center my-auto pt-4 sm:pt-8">
 
-          {/* 1. Judul — persis sesuai permintaan */}
+          {/* Logo Markaz Fiqih di atas Judul */}
+          <motion.img
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+            src="/logo.png"
+            alt="Markaz Fiqih"
+            className="h-12 sm:h-16 lg:h-20 w-auto mb-5 brightness-0 invert"
+          />
+
+          {/* 1. Judul */}
           <h1 className="font-serif font-bold leading-[1.15] tracking-tight max-w-4xl">
             <span
               className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic"
@@ -148,17 +158,17 @@ function HeroSection({
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-5xl sm:text-6xl lg:text-7xl text-white mt-1">
+            <span className="block text-4xl sm:text-6xl lg:text-7xl text-white mt-1">
               Kelas Markaz Fiqih
             </span>
           </h1>
 
-          {/* 2. Deskripsi — persis sesuai permintaan */}
-          <p className="text-white/80 text-base sm:text-lg lg:text-xl mt-5 leading-relaxed max-w-2xl">
-            Tempat belajar fiqih madzhab Syafi'i yang sistematis dan terstruktur.
+          {/* 2. Deskripsi */}
+          <p className="text-white/85 text-sm sm:text-lg lg:text-xl mt-4 leading-relaxed max-w-2xl">
+            Program pembelajaran fiqih madzhab Syafi'i online & offline yang mudah diikuti oleh masyarakat umum hingga penuntut ilmu.
           </p>
 
-          {/* 3. Dua tombol CTA — terlihat langsung tanpa scroll */}
+          {/* 3. Dua tombol CTA */}
           <div className="mt-6 sm:mt-8 flex flex-wrap justify-center items-center gap-3">
             <motion.div
               className="inline-block"
@@ -194,8 +204,22 @@ function HeroSection({
               </Button>
             </motion.div>
           </div>
-
         </div>
+
+        {/* Jargon Markaz Fiqih di bagian bawah seperti Quote */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center"
+        >
+          <blockquote className="font-serif italic text-white/90 text-sm sm:text-base leading-relaxed">
+            &ldquo;Tempat Belajar Fiqih Madzhab Syafi'i Yang Sistematis dan Terstruktur.&rdquo;
+          </blockquote>
+          <p className="text-[11px] uppercase tracking-widest text-white/60 mt-1 font-semibold">
+            — Markaz Fiqih
+          </p>
+        </motion.div>
       </div>
     </section>
   );
