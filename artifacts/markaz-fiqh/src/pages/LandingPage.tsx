@@ -115,7 +115,7 @@ function HeroSection({
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-screen min-h-dvh flex flex-col justify-between pt-16 pb-6">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-screen min-h-dvh flex flex-col justify-between pt-16 pb-12 sm:pb-16 lg:pb-20">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -135,9 +135,9 @@ function HeroSection({
         style={{ opacity: 0.22, mixBlendMode: 'luminosity', maskImage: 'linear-gradient(to top, black 30%, transparent 85%), linear-gradient(to right, black 40%, transparent 100%)', maskComposite: 'intersect' }}
       />
 
-      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-6 sm:py-8">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex-1 flex flex-col justify-between py-4 sm:py-6">
         {/* Top: Logo + Title + Subtitle + Buttons */}
-        <div className="flex flex-col items-center text-center my-auto -mt-2 sm:-mt-4 lg:-mt-6 pt-2 sm:pt-4">
+        <div className="flex flex-col items-center text-center my-auto -mt-4 sm:-mt-8 lg:-mt-10 pt-2">
 
           {/* 1. Logo Markaz Fiqih */}
           <motion.img
@@ -210,7 +210,7 @@ function HeroSection({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="pt-4 sm:pt-6 border-t border-white/15 w-full max-w-2xl mx-auto text-center mb-6 sm:mb-8 font-['Plus_Jakarta_Sans',sans-serif]"
+          className="pt-4 sm:pt-5 border-t border-white/15 w-full max-w-2xl mx-auto text-center mb-8 sm:mb-12 lg:mb-14 font-['Plus_Jakarta_Sans',sans-serif]"
         >
           <p className="text-xs uppercase tracking-widest text-white/80 font-bold mb-1 font-['Plus_Jakarta_Sans',sans-serif]">
             Markaz Fiqih
