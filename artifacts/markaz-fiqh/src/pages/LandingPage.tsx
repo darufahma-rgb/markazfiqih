@@ -243,7 +243,7 @@ function CurriculumSection() {
           Cara Belajar
         </p>
 
-        <h2 className="font-serif text-4xl sm:text-5xl font-bold text-foreground max-w-2xl leading-tight">
+        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-foreground max-w-2xl leading-tight">
           Dari cari kelas sampai mulai belajar,{' '}
           <span className="text-primary">cuma butuh 3 langkah.</span>
         </h2>
