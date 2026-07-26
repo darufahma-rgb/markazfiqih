@@ -206,7 +206,7 @@ export function AboutUsPage() {
               </p>
             </motion.div>
 
-            {/* ── Section Kelas Markaz Fiqih ────────────────────────────── */}
+            {/* ── Section Tiga Program Utama ────────────────────────────── */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -215,15 +215,8 @@ export function AboutUsPage() {
               className="border-t pt-10 mt-10"
             >
               <h2 className="font-serif text-2xl font-bold text-foreground">
-                Kelas Markaz Fiqih
+                Saat ini tersedia tiga program utama:
               </h2>
-              <p className="text-muted-foreground mt-2 leading-relaxed">
-                Kelas Markaz Fiqih dirancang untuk memenuhi kebutuhan belajar masyarakat,
-                mulai dari pemula hingga penuntut ilmu yang ingin mendalami fiqih secara
-                akademis. Program ini diadakan dengan harapan bisa menjadi tempat belajar
-                fiqih madzhab Syafi'i yang sistematis dan terstruktur.
-              </p>
-              <p className="text-muted-foreground mt-2">Saat ini tersedia tiga program utama:</p>
 
               {/* 3 Card Program — vertikal, space-y-6 */}
               <div className="space-y-6 mt-6">
