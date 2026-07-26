@@ -230,7 +230,7 @@ function HeroSection({
 // ────────────────────────────────────────────────────────────────────────────
 function CurriculumSection() {
   return (
-    <section className="bg-background py-16 sm:py-24">
+    <section className="bg-background py-12 sm:py-16">
       <div className="container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px]">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -323,7 +323,7 @@ function AsymmetricStatsSection() {
 
   return (
     <section className="bg-muted/30 border-y border-border">
-      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[1200px]">
+      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-12 sm:py-16 max-w-[1200px]">
 
         {/* Header — tidak diubah */}
         <motion.div
@@ -411,7 +411,7 @@ const METHOD_REFERENCES = [
 function MethodologySection() {
   return (
     <section className="bg-background border-b border-border">
-      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[1200px]">
+      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-12 sm:py-16 max-w-[1200px]">
         {/* Blok teks — full width di atas, lebar dibatasi */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -492,7 +492,7 @@ function InstructorsSection({
 }) {
   return (
     <section className="bg-background border-b border-border">
-      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[1200px]">
+      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-12 sm:py-16 max-w-[1200px]">
 
         {/* Header */}
         <motion.div
@@ -627,7 +627,7 @@ function FeaturedClassesSection({
 }) {
   return (
     <section className="bg-muted/20">
-      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[1200px]">
+      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-12 sm:py-16 max-w-[1200px]">
 
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -718,7 +718,7 @@ function TestimonialsSection({
 
   return (
     <section className="bg-[hsl(var(--brand-red-tint))] border-y border-[hsl(var(--brand-red-border))]">
-      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-16 sm:py-20 max-w-[1200px]">
+      <div className="container mx-auto px-5 sm:px-8 lg:px-16 py-12 sm:py-16 max-w-[1200px]">
 
         {/* Header */}
         <motion.div
