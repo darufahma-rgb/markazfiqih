@@ -14,8 +14,8 @@ const DEFAULT_DESCRIPTION =
 export function SEO({
   title,
   description = DEFAULT_DESCRIPTION,
-  image = 'https://kelasmarkazfiqih.vercel.app/opengraph.jpg',
-  url = 'https://kelasmarkazfiqih.vercel.app/',
+  image = 'https://kelasmarkazfiqih.com/opengraph.jpg',
+  url = 'https://kelasmarkazfiqih.com/',
 }: SEOProps) {
   const fullTitle =
     !title || title === BRAND_NAME
