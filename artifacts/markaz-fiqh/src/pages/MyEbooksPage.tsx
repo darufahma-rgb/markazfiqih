@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { listMyEbooks, getEbookDownloadUrl } from '@/lib/db';
+import { SEO } from '@/components/SEO';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AppShell } from '@/components/AppShell';
 import { Button } from '@/components/ui/button';
@@ -144,6 +145,7 @@ function MyEbooksContent() {
 
   return (
     <AppShell>
+      <SEO title="Ebook Saya" description="Daftar ebook digital fiqih yang kamu miliki di Kelas Markaz Fiqih." />
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-2">
         <h1 className="font-serif text-xl lg:text-[32px] font-bold text-foreground leading-tight">
           Ebook Saya
