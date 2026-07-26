@@ -1081,7 +1081,7 @@ function PlaylistMode({
             </div>
 
             {(gdriveMateriUrl || waGroupUrl || soalLatihanUrl || ebookUrl || testimoniFormUrl) && (
-              <div className="order-4 bg-card rounded-2xl border overflow-hidden">
+              <div className="order-4 bg-card rounded-2xl border overflow-hidden lg:hidden">
                 <FacilitasCard
                   gdriveMateriUrl={gdriveMateriUrl}
                   waGroupUrl={waGroupUrl}
@@ -1110,6 +1110,17 @@ function PlaylistMode({
               mobile kontennya sudah dirender di stack kolom kiri di atas. */}
           <aside className="hidden lg:flex lg:flex-col gap-6 w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-20 lg:self-start">
             <DaftarPertemuanCard />
+            {(gdriveMateriUrl || waGroupUrl || soalLatihanUrl || ebookUrl || testimoniFormUrl) && (
+              <div className="bg-card rounded-2xl border overflow-hidden">
+                <FacilitasCard
+                  gdriveMateriUrl={gdriveMateriUrl}
+                  waGroupUrl={waGroupUrl}
+                  soalLatihanUrl={soalLatihanUrl}
+                  ebookUrl={ebookUrl}
+                  testimoniFormUrl={testimoniFormUrl}
+                />
+              </div>
+            )}
             <KelasLainnyaSection />
           </aside>
         </div>
