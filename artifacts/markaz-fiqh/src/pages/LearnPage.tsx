@@ -1062,26 +1062,14 @@ function PlaylistMode({
               </div>
             </div>
 
-            {/* Daftar Pertemuan — di mobile tampil SETELAH card video (order-2),
-                sebelum Tentang Pengajar. Di desktop pindah ke kolom kanan
-                (hidden di sini lewat `lg:hidden`, lihat duplikatnya di kolom
-                kanan dengan `hidden lg:block`). */}
+            {/* Daftar Pertemuan — di mobile tampil SETELAH card video (order-2) */}
             <div className="order-2 lg:hidden">
               <DaftarPertemuanCard />
             </div>
 
-            {/* Tentang Pengajar — diperluas: foto+bio+rating pengajar DAN
-                Review & Komentar kelas (Prompt 102/116) menyatu di card yang
-                sama (order-3, di mobile setelah Daftar Pertemuan). */}
-            <div className="order-3 bg-card rounded-2xl border p-5 space-y-6">
-              <InstructorCard />
-              <div className="pt-2 border-t">
-                <ClassReviewSection classId={classId} currentUserId={userId} variant="card" />
-              </div>
-            </div>
-
+            {/* Fasilitas Kelas — di mobile tampil LANGSUNG DI BAWAH Daftar Pertemuan (order-2) */}
             {(gdriveMateriUrl || waGroupUrl || soalLatihanUrl || ebookUrl || testimoniFormUrl) && (
-              <div className="order-4 bg-card rounded-2xl border overflow-hidden lg:hidden">
+              <div className="order-2 bg-card rounded-2xl border overflow-hidden lg:hidden">
                 <FacilitasCard
                   gdriveMateriUrl={gdriveMateriUrl}
                   waGroupUrl={waGroupUrl}
@@ -1091,6 +1079,14 @@ function PlaylistMode({
                 />
               </div>
             )}
+
+            {/* Tentang Pengajar & Review — order-3 */}
+            <div className="order-3 bg-card rounded-2xl border p-5 space-y-6">
+              <InstructorCard />
+              <div className="pt-2 border-t">
+                <ClassReviewSection classId={classId} currentUserId={userId} variant="card" />
+              </div>
+            </div>
 
             <div className="order-4">
               <CertificateSection classId={classId} classTitle={classTitle} isClassCompleted={isCompleted} />
@@ -1687,28 +1683,6 @@ function LearnContent() {
               </div>
             </div>
 
-            {/* Fasilitas Kelas — mobile only (desktop: tampil di sidebar kanan) */}
-            {(classDetail.gdriveMateriUrl || classDetail.waGroupUrl || classDetail.soalLatihanUrl || classDetail.ebookUrl || classDetail.testimoniFormUrl) && (
-              <div className="pt-4 border-t lg:hidden">
-                <FacilitasCard
-                  gdriveMateriUrl={classDetail.gdriveMateriUrl}
-                  waGroupUrl={classDetail.waGroupUrl}
-                  soalLatihanUrl={classDetail.soalLatihanUrl}
-                  ebookUrl={classDetail.ebookUrl}
-                  testimoniFormUrl={classDetail.testimoniFormUrl}
-                />
-              </div>
-            )}
-
-            {/* Sertifikat — mobile only */}
-            <div className="lg:hidden">
-              <CertificateSection
-                classId={classId}
-                classTitle={classDetail.title}
-                isClassCompleted={isNormalClassCompleted}
-              />
-            </div>
-
             {/* Mini nav — dars in current module */}
             {activeEntry && (
               <div className="pt-4 border-t">
@@ -1747,6 +1721,28 @@ function LearnContent() {
                 </ul>
               </div>
             )}
+
+            {/* Fasilitas Kelas — mobile only (di bawah urutan pertemuan) */}
+            {(classDetail.gdriveMateriUrl || classDetail.waGroupUrl || classDetail.soalLatihanUrl || classDetail.ebookUrl || classDetail.testimoniFormUrl) && (
+              <div className="pt-4 border-t lg:hidden">
+                <FacilitasCard
+                  gdriveMateriUrl={classDetail.gdriveMateriUrl}
+                  waGroupUrl={classDetail.waGroupUrl}
+                  soalLatihanUrl={classDetail.soalLatihanUrl}
+                  ebookUrl={classDetail.ebookUrl}
+                  testimoniFormUrl={classDetail.testimoniFormUrl}
+                />
+              </div>
+            )}
+
+            {/* Sertifikat — mobile only */}
+            <div className="lg:hidden">
+              <CertificateSection
+                classId={classId}
+                classTitle={classDetail.title}
+                isClassCompleted={isNormalClassCompleted}
+              />
+            </div>
 
             {/* Mobile: Tentang Pengajar (desktop: tampil di sidebar kanan) */}
             <div className="pt-4 border-t lg:hidden">
