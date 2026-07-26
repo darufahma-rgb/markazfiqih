@@ -719,10 +719,13 @@ function PlaylistMode({
   const isCompleted = initialIsCompleted || optimisticDone;
 
   const { mutate: completeEnrollmentMutate, isPending: isCompleting } = useMutation({
-    mutationFn: (params: { enrollmentId: string }) => completeEnrollmentFn(params.enrollmentId),
+    mutationFn: () => completeEnrollmentFn({ userId, classId, enrollmentId }),
     onSuccess: () => {
       setOptimisticDone(true);
       queryClient.invalidateQueries({ queryKey: ['enrollments', userId] });
+      queryClient.invalidateQueries({ queryKey: ['progress', userId, classId] });
+      queryClient.invalidateQueries({ queryKey: ['my-classes'] });
+      toast.success('Kelas berhasil ditandai selesai! Sertifikat siap diterbitkan.');
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Gagal menyimpan, coba lagi.');
@@ -1043,8 +1046,8 @@ function PlaylistMode({
                   >
                     <Button
                       size="lg"
-                      onClick={() => enrollmentId && completeEnrollmentMutate({ enrollmentId })}
-                      disabled={isCompleting || !enrollmentId}
+                      onClick={() => completeEnrollmentMutate()}
+                      disabled={isCompleting || !userId}
                       className="gap-2"
                     >
                       {isCompleting ? (
@@ -1374,6 +1377,15 @@ function LearnContent() {
     });
   }, [queryClient, user?.id, classId]);
 
+  const enrollment = useMemo(
+    () => enrollments.find((e) => e.class.id === classId) ?? null,
+    [enrollments, classId],
+  );
+
+  const isNormalClassCompleted =
+    (enrollment?.isCompleted ?? false) ||
+    (totalDars > 0 && completedIds.size === totalDars);
+
   const handleMarkDone = useCallback(() => {
     if (!user?.id || !resolvedActiveDarsId) return;
     updateProgressMutate(
@@ -1381,11 +1393,16 @@ function LearnContent() {
       {
         onSuccess: () => {
           invalidateProgress();
+          // Jika ini dars terakhir yang diselesaikan, otomatis tandai kelas selesai
+          if (totalDars > 0 && completedIds.size + 1 >= totalDars) {
+            completeEnrollmentFn({ userId: user.id, classId: classId!, enrollmentId: enrollment?.id });
+            queryClient.invalidateQueries({ queryKey: ['enrollments', user.id] });
+          }
           if (nextEntry) setTimeout(() => setActiveDarsId(nextEntry.dars.id), 400);
         },
       },
     );
-  }, [user?.id, resolvedActiveDarsId, updateProgressMutate, invalidateProgress, nextEntry]);
+  }, [user?.id, resolvedActiveDarsId, updateProgressMutate, invalidateProgress, nextEntry, totalDars, completedIds.size, classId, enrollment, queryClient]);
 
   const handleUnmarkDone = useCallback(() => {
     if (!user?.id || !resolvedActiveDarsId) return;
@@ -1677,7 +1694,7 @@ function LearnContent() {
               <CertificateSection
                 classId={classId}
                 classTitle={classDetail.title}
-                isClassCompleted={totalDars > 0 && completedIds.size === totalDars}
+                isClassCompleted={isNormalClassCompleted}
               />
             </div>
 
@@ -1837,7 +1854,7 @@ function LearnContent() {
           <CertificateSection
             classId={classId}
             classTitle={classDetail.title}
-            isClassCompleted={totalDars > 0 && completedIds.size === totalDars}
+            isClassCompleted={isNormalClassCompleted}
           />
         </aside>
       </div>

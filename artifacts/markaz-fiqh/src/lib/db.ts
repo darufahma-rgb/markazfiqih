@@ -1136,14 +1136,69 @@ export async function updateProgress(params: {
   }
 }
 
-// ─── COMPLETE ENROLLMENT ────────────────────────────────────────────────────
+export async function completeEnrollment(params: string | { userId: string; classId: string; enrollmentId?: string | null }) {
+  const userId = typeof params === 'object' ? params.userId : null;
+  const classId = typeof params === 'object' ? params.classId : null;
+  const enrollmentId = typeof params === 'string' ? params : params.enrollmentId;
 
-export async function completeEnrollment(enrollmentId: string) {
-  const { error } = await supabase
-    .from('enrollments')
-    .update({ is_completed: true })
-    .eq('id', enrollmentId);
-  if (error) throw error;
+  if (enrollmentId) {
+    await supabase
+      .from('enrollments')
+      .update({ is_completed: true })
+      .eq('id', enrollmentId);
+  }
+
+  if (userId && classId) {
+    const { data: existing } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('class_id', classId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from('enrollments')
+        .update({ is_completed: true })
+        .eq('id', existing.id);
+    } else {
+      await supabase
+        .from('enrollments')
+        .insert({
+          user_id: userId,
+          class_id: classId,
+          is_completed: true,
+        });
+    }
+
+    // Fetch semua dars_id dari kelas ini & tandai 100% selesai di tabel progress
+    const { data: classData } = await supabase
+      .from('classes')
+      .select('modules(dars(id))')
+      .eq('id', classId)
+      .maybeSingle();
+
+    const darsIds: string[] = (classData?.modules ?? []).flatMap((m: any) =>
+      (m.dars ?? []).map((d: any) => d.id),
+    );
+
+    if (darsIds.length > 0) {
+      const progressInserts = darsIds.map((darsId) => ({
+        user_id: userId,
+        dars_id: darsId,
+      }));
+      await supabase.from('progress').upsert(progressInserts, { onConflict: 'user_id,dars_id' });
+    }
+
+    await supabase.from('video_watch_progress').upsert(
+      {
+        user_id: userId,
+        class_id: classId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,class_id' },
+    );
+  }
 }
 
 // ─── ADMIN TESTIMONIALS CRUD ─────────────────────────────────────────────────
@@ -2881,6 +2936,13 @@ export async function requestCertificate(params: {
 }): Promise<CertificateRequest> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Harus login untuk mengambil sertifikat.');
+
+  // Pastikan enrollment & status selesai ter-upsert 100% di database
+  try {
+    await completeEnrollment({ userId: user.id, classId: params.classId });
+  } catch (e) {
+    console.warn('Auto complete enrollment in requestCertificate warning:', e);
+  }
 
   const { data, error } = await supabase
     .from('certificate_requests')
