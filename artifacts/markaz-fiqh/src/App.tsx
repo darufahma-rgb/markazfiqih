@@ -45,12 +45,75 @@ import EbookDetailPage from '@/pages/EbookDetailPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import PaymentPage from '@/pages/PaymentPage';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10 * 60 * 1000, // 10 minutes cache freshness
+      gcTime: 60 * 60 * 1000, // 1 hour garbage collection
+      refetchOnWindowFocus: false, // DO NOT refetch when switching tabs/windows
+      refetchOnReconnect: false, // DO NOT refetch on network reconnect
+      refetchOnMount: false, // Use cached data on mount if fresh
+      retry: 1,
+    },
+  },
+});
 
-/** Semua halaman non-publik dibungkus ProtectedRoute langsung di sini. */
-function P({ children }: { children: React.ReactNode }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>;
-}
+// ── Static route wrappers to prevent wouter from unmounting/remounting pages ──
+const withP = (Component: React.ComponentType) => {
+  return function ProtectedRouteWrapper() {
+    return (
+      <ProtectedRoute>
+        <Component />
+      </ProtectedRoute>
+    );
+  };
+};
+
+const withAdmin = (Component: React.ComponentType) => {
+  return function AdminRouteWrapper() {
+    return (
+      <ProtectedRoute>
+        <RequireAdminRoute>
+          <Component />
+        </RequireAdminRoute>
+      </ProtectedRoute>
+    );
+  };
+};
+
+const ProtectedCatalogPage = withP(CatalogPage);
+const ProtectedClassDetailPage = withP(ClassDetailPage);
+const ProtectedBundlesPage = withP(BundlesPage);
+const ProtectedInstructorsPage = withP(InstructorsPage);
+const ProtectedInstructorDetailPage = withP(InstructorDetailPage);
+const ProtectedAboutUsPage = withP(AboutUsPage);
+const ProtectedEbookDetailPage = withP(EbookDetailPage);
+const ProtectedDashboardPage = withP(DashboardPage);
+const ProtectedMyClassesPage = withP(MyClassesPage);
+const ProtectedCartPage = withP(CartPage);
+const ProtectedLearnPage = withP(LearnPage);
+const ProtectedMyEbooksPage = withP(MyEbooksPage);
+const ProtectedCheckoutPage = withP(CheckoutPage);
+const ProtectedPaymentPage = withP(PaymentPage);
+const ProtectedCertificatePage = withP(CertificatePage);
+
+const AdminCertificates = withAdmin(AdminCertificatesPage);
+const AdminClasses = withAdmin(AdminClassesPage);
+const AdminInstructors = withAdmin(AdminInstructorsPage);
+const AdminOrders = withAdmin(AdminOrdersPage);
+const AdminTestimonials = withAdmin(AdminTestimonialsPage);
+const AdminReviews = withAdmin(AdminReviewsPage);
+const AdminSettings = withAdmin(AdminSettingsPage);
+const AdminManageAdmins = withAdmin(AdminManageAdminsPage);
+const AdminDashboardMessages = withAdmin(AdminDashboardMessagesPage);
+const AdminUsers = withAdmin(AdminUsersPage);
+const AdminCatalogLayout = withAdmin(AdminCatalogLayoutPage);
+const AdminBundles = withAdmin(AdminBundlesPage);
+const AdminEbooks = withAdmin(AdminEbooksPage);
+const AdminNotifications = withAdmin(AdminNotificationsPage);
+const AdminCertificateDesign = withAdmin(AdminCertificateDesignPage);
+const AdminVouchers = withAdmin(AdminVouchersPage);
+const AdminDashboard = withAdmin(AdminDashboardPage);
 
 function Router() {
   return (
@@ -61,76 +124,42 @@ function Router() {
       <Route path="/onboarding-nama" component={OnboardingNamaPage} />
 
       {/* Halaman umum & privat — wajib login */}
-      <Route path="/katalog">{() => <P><CatalogPage /></P>}</Route>
-      <Route path="/kelas/:id">{() => <P><ClassDetailPage /></P>}</Route>
-      <Route path="/class/:id">{() => <P><ClassDetailPage /></P>}</Route>
-      <Route path="/paket-bundle">{() => <P><BundlesPage /></P>}</Route>
-      <Route path="/pengajar">{() => <P><InstructorsPage /></P>}</Route>
-      <Route path="/pengajar/:id">{() => <P><InstructorDetailPage /></P>}</Route>
-      <Route path="/tentang-kami">{() => <P><AboutUsPage /></P>}</Route>
-      <Route path="/ebook/:id">{() => <P><EbookDetailPage /></P>}</Route>
-      <Route path="/dashboard">{() => <P><DashboardPage /></P>}</Route>
-      <Route path="/my-classes">{() => <P><MyClassesPage /></P>}</Route>
-      <Route path="/keranjang">{() => <P><CartPage /></P>}</Route>
-      <Route path="/belajar/:classId">{() => <P><LearnPage /></P>}</Route>
-      <Route path="/learn/:classId">{() => <P><LearnPage /></P>}</Route>
-      <Route path="/ebook-saya">{() => <P><MyEbooksPage /></P>}</Route>
-      <Route path="/checkout">{() => <P><CheckoutPage /></P>}</Route>
-      <Route path="/pembayaran/:invoiceId">{() => <P><PaymentPage /></P>}</Route>
-      <Route path="/sertifikat/:id">{() => <P><CertificatePage /></P>}</Route>
+      <Route path="/katalog" component={ProtectedCatalogPage} />
+      <Route path="/kelas/:id" component={ProtectedClassDetailPage} />
+      <Route path="/class/:id" component={ProtectedClassDetailPage} />
+      <Route path="/paket-bundle" component={ProtectedBundlesPage} />
+      <Route path="/pengajar" component={ProtectedInstructorsPage} />
+      <Route path="/pengajar/:id" component={ProtectedInstructorDetailPage} />
+      <Route path="/tentang-kami" component={ProtectedAboutUsPage} />
+      <Route path="/ebook/:id" component={ProtectedEbookDetailPage} />
+      <Route path="/dashboard" component={ProtectedDashboardPage} />
+      <Route path="/my-classes" component={ProtectedMyClassesPage} />
+      <Route path="/keranjang" component={ProtectedCartPage} />
+      <Route path="/belajar/:classId" component={ProtectedLearnPage} />
+      <Route path="/learn/:classId" component={ProtectedLearnPage} />
+      <Route path="/ebook-saya" component={ProtectedMyEbooksPage} />
+      <Route path="/checkout" component={ProtectedCheckoutPage} />
+      <Route path="/pembayaran/:invoiceId" component={ProtectedPaymentPage} />
+      <Route path="/sertifikat/:id" component={ProtectedCertificatePage} />
 
       {/* Admin — wajib login + admin */}
-      <Route path="/admin/certificates">
-        {() => <P><RequireAdminRoute><AdminCertificatesPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/classes">
-        {() => <P><RequireAdminRoute><AdminClassesPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/instructors">
-        {() => <P><RequireAdminRoute><AdminInstructorsPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/orders">
-        {() => <P><RequireAdminRoute><AdminOrdersPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/testimonials">
-        {() => <P><RequireAdminRoute><AdminTestimonialsPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/reviews">
-        {() => <P><RequireAdminRoute><AdminReviewsPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/settings">
-        {() => <P><RequireAdminRoute><AdminSettingsPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/manage-admins">
-        {() => <P><RequireAdminRoute><AdminManageAdminsPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/dashboard-messages">
-        {() => <P><RequireAdminRoute><AdminDashboardMessagesPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/users">
-        {() => <P><RequireAdminRoute><AdminUsersPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/catalog-layout">
-        {() => <P><RequireAdminRoute><AdminCatalogLayoutPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/bundles">
-        {() => <P><RequireAdminRoute><AdminBundlesPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/ebooks">
-        {() => <P><RequireAdminRoute><AdminEbooksPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/notifications">
-        {() => <P><RequireAdminRoute><AdminNotificationsPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/certificate-design">
-        {() => <P><RequireAdminRoute><AdminCertificateDesignPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin/vouchers">
-        {() => <P><RequireAdminRoute><AdminVouchersPage /></RequireAdminRoute></P>}
-      </Route>
-      <Route path="/admin">
-        {() => <P><RequireAdminRoute><AdminDashboardPage /></RequireAdminRoute></P>}
-      </Route>
+      <Route path="/admin/certificates" component={AdminCertificates} />
+      <Route path="/admin/classes" component={AdminClasses} />
+      <Route path="/admin/instructors" component={AdminInstructors} />
+      <Route path="/admin/orders" component={AdminOrders} />
+      <Route path="/admin/testimonials" component={AdminTestimonials} />
+      <Route path="/admin/reviews" component={AdminReviews} />
+      <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/manage-admins" component={AdminManageAdmins} />
+      <Route path="/admin/dashboard-messages" component={AdminDashboardMessages} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/catalog-layout" component={AdminCatalogLayout} />
+      <Route path="/admin/bundles" component={AdminBundles} />
+      <Route path="/admin/ebooks" component={AdminEbooks} />
+      <Route path="/admin/notifications" component={AdminNotifications} />
+      <Route path="/admin/certificate-design" component={AdminCertificateDesign} />
+      <Route path="/admin/vouchers" component={AdminVouchers} />
+      <Route path="/admin" component={AdminDashboard} />
 
       <Route component={NotFound} />
     </Switch>

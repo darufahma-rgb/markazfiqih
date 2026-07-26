@@ -127,6 +127,7 @@ export default function ClassDetailPage() {
     queryKey: ['class', id],
     queryFn: () => getClassById(id ?? ''),
     enabled: !!id,
+    staleTime: 10 * 60 * 1000,
   });
   const enrolledClassIdsQuery = useQuery({
     queryKey: ['enrolled-class-ids', user?.id],
@@ -135,6 +136,7 @@ export default function ClassDetailPage() {
       return new Set(enrollments.map((e) => e.class.id));
     },
     enabled: !!user?.id,
+    staleTime: 10 * 60 * 1000,
   });
 
   const { classIdsInCart, addToCart, isAdding } = useCart();
@@ -143,17 +145,20 @@ export default function ClassDetailPage() {
   const enrollmentStatsQuery = useQuery({
     queryKey: ['class-enrollment-stats'],
     queryFn: getClassEnrollmentStats,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
   const enrollmentCount = enrollmentStatsQuery.data?.[cls?.id ?? '']?.enrolledCount ?? 0;
 
   useEffect(() => {
-    if (cls && (window.location.pathname.startsWith('/class/') || id !== cls.slug)) {
-      window.history.replaceState(null, '', `/kelas/${cls.slug}`);
+    if (cls) {
+      const targetPath = `/kelas/${cls.slug}`;
+      if (window.location.pathname !== targetPath && (window.location.pathname.startsWith('/class/') || id !== cls.slug)) {
+        window.history.replaceState(null, '', targetPath);
+      }
     }
   }, [cls, id]);
 
-  if (isLoading) return <ClassDetailLoading />;
+  if (isLoading && !cls) return <ClassDetailLoading />;
   if (isError || !cls || cls.status !== 'published') return <ClassNotFound />;
 
   const inCart = classIdsInCart.has(cls.id);

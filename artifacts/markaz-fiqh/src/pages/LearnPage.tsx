@@ -1279,11 +1279,15 @@ function LearnContent() {
     queryKey: ['class', classId],
     queryFn: () => getClassById(classId!),
     enabled: !!classId,
+    staleTime: 10 * 60 * 1000,
   });
 
   useEffect(() => {
-    if (classDetail && (window.location.pathname.startsWith('/learn/') || classId !== classDetail.slug)) {
-      window.history.replaceState(null, '', `/belajar/${classDetail.slug}`);
+    if (classDetail) {
+      const targetPath = `/belajar/${classDetail.slug}`;
+      if (window.location.pathname !== targetPath && (window.location.pathname.startsWith('/learn/') || classId !== classDetail.slug)) {
+        window.history.replaceState(null, '', targetPath);
+      }
     }
   }, [classDetail, classId]);
 
@@ -1391,7 +1395,7 @@ function LearnContent() {
     );
   }, [user?.id, resolvedActiveDarsId, updateProgressMutate, invalidateProgress]);
 
-  if (isLoading) {
+  if (isLoadingClass && !classDetail) {
     return (
       <AppShell>
         <div className="flex-1 flex items-center justify-center">
