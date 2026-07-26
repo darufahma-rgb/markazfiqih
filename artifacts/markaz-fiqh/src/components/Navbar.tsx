@@ -45,7 +45,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
           : 'sticky top-0 z-50 w-full bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))]'
       }
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px]">
         <div className="relative flex h-16 items-center justify-between">
           {/* Kiri: hamburger (mobile) + desktop logo */}
           <div className="flex items-center gap-1">
