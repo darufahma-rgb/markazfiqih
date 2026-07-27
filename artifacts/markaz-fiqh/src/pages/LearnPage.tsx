@@ -1101,10 +1101,10 @@ function PlaylistMode({
             </div>
           </div>
 
-          {/* ── Kolom kanan (sempit, sticky) ───────────────────────────────────
+          {/* ── Kolom kanan (sempit, mengikuti scroll halaman) ─────────────────
               Hanya tampil sebagai kolom terpisah di desktop (`lg:flex`); di
               mobile kontennya sudah dirender di stack kolom kiri di atas. */}
-          <aside className="hidden lg:flex lg:flex-col gap-6 w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-20 lg:self-start">
+          <aside className="hidden lg:flex lg:flex-col gap-6 w-full lg:w-80 xl:w-96 shrink-0">
             <DaftarPertemuanCard />
             {(gdriveMateriUrl || waGroupUrl || soalLatihanUrl || ebookUrl || testimoniFormUrl) && (
               <div className="bg-card rounded-2xl border overflow-hidden">
