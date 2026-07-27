@@ -115,7 +115,7 @@ function HeroSection({
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] min-h-[460px] flex flex-col justify-between pt-2 sm:pt-4 pb-2 sm:pb-4">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-[calc(100dvh-4rem)] flex flex-col justify-between pt-4 sm:pt-6 pb-3 sm:pb-4">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -137,7 +137,7 @@ function HeroSection({
 
       <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] h-full flex flex-col justify-between items-center py-1 sm:py-2">
         {/* Center Hero Block */}
-        <div className="my-auto flex flex-col items-center text-center space-y-2.5 sm:space-y-3.5 md:space-y-4 max-w-4xl">
+        <div className="my-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 md:space-y-5 max-w-5xl">
 
           {/* 1. Logo Markaz Fiqih */}
           <motion.img
@@ -146,29 +146,29 @@ function HeroSection({
             transition={{ duration: 0.4 }}
             src="/logo.png"
             alt="Markaz Fiqih"
-            className="h-6 sm:h-8 lg:h-10 max-h-[5vh] w-auto brightness-0 invert"
+            className="h-8 sm:h-10 lg:h-12 w-auto brightness-0 invert"
           />
 
           {/* 2. Ahlan wa Sahlan di & 3. Kelas Markaz Fiqih */}
           <h1 className="font-['Plus_Jakarta_Sans',sans-serif] leading-[1.08] tracking-tight">
             <span
-              className="block text-lg sm:text-2xl lg:text-3xl font-semibold italic mb-0.5"
+              className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic mb-1 sm:mb-2"
               style={{ color: 'hsl(var(--accent))' }}
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white">
+            <span className="block text-5xl sm:text-7xl lg:text-8xl font-extrabold text-white">
               Kelas Markaz Fiqih
             </span>
           </h1>
 
           {/* 4. Subtitle Deskripsi */}
-          <p className="font-['Plus_Jakarta_Sans',sans-serif] text-white/90 text-xs sm:text-sm lg:text-base leading-relaxed max-w-xl font-medium px-2">
+          <p className="font-['Plus_Jakarta_Sans',sans-serif] text-white/90 text-sm sm:text-lg lg:text-xl leading-relaxed max-w-2xl font-medium px-2">
             Tempat Belajar Fiqih Madzhab Syafi'i Yang Sistematis dan Terstruktur
           </p>
 
           {/* 5. CTA Buttons */}
-          <div className="pt-1 flex flex-wrap justify-center items-center gap-2 sm:gap-3 font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="pt-2 sm:pt-3 flex flex-wrap justify-center items-center gap-3 sm:gap-4 font-['Plus_Jakarta_Sans',sans-serif]">
             <motion.div
               className="inline-block"
               whileHover={{ scale: 1.02 }}
@@ -178,7 +178,7 @@ function HeroSection({
               <Button
                 asChild
                 size="lg"
-                className="h-[40px] sm:h-[46px] px-5 sm:px-7 text-xs sm:text-sm font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg font-['Plus_Jakarta_Sans',sans-serif]"
+                className="h-[46px] sm:h-[50px] px-7 sm:px-9 text-sm sm:text-base font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg font-['Plus_Jakarta_Sans',sans-serif]"
                 style={{ backgroundColor: 'hsl(var(--accent))' }}
               >
                 <Link href="/katalog">Mulai Belajar</Link>
@@ -194,11 +194,11 @@ function HeroSection({
                 asChild
                 variant="ghost"
                 size="lg"
-                className="h-[40px] sm:h-[46px] px-4 sm:px-6 text-xs sm:text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25 font-['Plus_Jakarta_Sans',sans-serif]"
+                className="h-[46px] sm:h-[50px] px-6 sm:px-8 text-sm sm:text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25 font-['Plus_Jakarta_Sans',sans-serif]"
               >
                 <Link href="/katalog">
                   Lihat Kelas Tersedia
-                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
             </motion.div>
