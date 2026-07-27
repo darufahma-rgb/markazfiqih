@@ -115,7 +115,7 @@ function HeroSection({
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] min-h-[calc(100dvh-4rem)] flex flex-col justify-between pt-4 sm:pt-6 pb-3 sm:pb-4">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] py-10 sm:py-14 lg:py-16">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -131,13 +131,13 @@ function HeroSection({
         src="/masjid-azhar.png"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 left-0 w-[160px] sm:w-[240px] lg:w-[280px] max-h-[25vh] sm:max-h-[30vh] w-auto object-contain select-none"
+        className="pointer-events-none absolute bottom-0 left-0 w-[220px] sm:w-[300px] lg:w-[360px] select-none"
         style={{ opacity: 0.22, mixBlendMode: 'luminosity', maskImage: 'linear-gradient(to top, black 30%, transparent 85%), linear-gradient(to right, black 40%, transparent 100%)', maskComposite: 'intersect' }}
       />
 
-      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] h-full flex flex-col justify-between items-center py-1 sm:py-2">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] flex flex-col items-center">
         {/* Center Hero Block */}
-        <div className="my-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 md:space-y-5 max-w-5xl">
+        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-5 md:space-y-6 max-w-4xl pt-2 sm:pt-4">
 
           {/* 1. Logo Markaz Fiqih */}
           <motion.img
@@ -146,18 +146,18 @@ function HeroSection({
             transition={{ duration: 0.4 }}
             src="/logo.png"
             alt="Markaz Fiqih"
-            className="h-8 sm:h-10 lg:h-12 w-auto brightness-0 invert"
+            className="h-8 sm:h-10 lg:h-12 w-auto mb-1 brightness-0 invert"
           />
 
           {/* 2. Ahlan wa Sahlan di & 3. Kelas Markaz Fiqih */}
-          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] leading-[1.08] tracking-tight">
+          <h1 className="font-['Plus_Jakarta_Sans',sans-serif] leading-[1.1] tracking-tight">
             <span
               className="block text-2xl sm:text-3xl lg:text-4xl font-semibold italic mb-1 sm:mb-2"
               style={{ color: 'hsl(var(--accent))' }}
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-5xl sm:text-7xl lg:text-8xl font-extrabold text-white">
+            <span className="block text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white">
               Kelas Markaz Fiqih
             </span>
           </h1>
@@ -210,12 +210,12 @@ function HeroSection({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="pt-2 sm:pt-3 border-t border-white/15 w-full max-w-lg mx-auto text-center shrink-0 mb-1 sm:mb-2 font-['Plus_Jakarta_Sans',sans-serif]"
+          className="mt-8 sm:mt-12 lg:mt-14 pt-4 sm:pt-5 border-t border-white/15 w-full max-w-xl mx-auto text-center font-['Plus_Jakarta_Sans',sans-serif]"
         >
-          <p className="text-[10px] sm:text-xs uppercase tracking-widest text-white/80 font-bold mb-0.5 font-['Plus_Jakarta_Sans',sans-serif]">
+          <p className="text-xs uppercase tracking-widest text-white/80 font-bold mb-1 font-['Plus_Jakarta_Sans',sans-serif]">
             Markaz Fiqih
           </p>
-          <blockquote className="font-['Plus_Jakarta_Sans',sans-serif] italic text-white/95 text-xs sm:text-sm leading-relaxed font-medium">
+          <blockquote className="font-['Plus_Jakarta_Sans',sans-serif] italic text-white/95 text-xs sm:text-sm lg:text-base leading-relaxed font-medium">
             &ldquo;Membumikan Fiqih di Setiap Lini Kehidupan&rdquo;
           </blockquote>
         </motion.div>
