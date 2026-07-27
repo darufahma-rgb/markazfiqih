@@ -115,7 +115,7 @@ function HeroSection({
   studentCountLabel: string | null | undefined;
 }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] h-[100dvh] max-h-[100dvh] min-h-[520px] flex flex-col justify-between pt-14 sm:pt-16 pb-4 sm:pb-6">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary to-[hsl(var(--brand-red-hover))] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] min-h-[460px] flex flex-col justify-between pt-2 sm:pt-4 pb-2 sm:pb-4">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 mix-blend-multiply"
@@ -131,13 +131,13 @@ function HeroSection({
         src="/masjid-azhar.png"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 left-0 w-[180px] sm:w-[260px] lg:w-[320px] max-h-[28vh] sm:max-h-[35vh] w-auto object-contain select-none"
+        className="pointer-events-none absolute bottom-0 left-0 w-[160px] sm:w-[240px] lg:w-[280px] max-h-[25vh] sm:max-h-[30vh] w-auto object-contain select-none"
         style={{ opacity: 0.22, mixBlendMode: 'luminosity', maskImage: 'linear-gradient(to top, black 30%, transparent 85%), linear-gradient(to right, black 40%, transparent 100%)', maskComposite: 'intersect' }}
       />
 
-      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] h-full flex flex-col justify-between items-center py-2 sm:py-4">
+      <div className="relative z-10 container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px] h-full flex flex-col justify-between items-center py-1 sm:py-2">
         {/* Center Hero Block */}
-        <div className="my-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 md:space-y-5 max-w-4xl">
+        <div className="my-auto flex flex-col items-center text-center space-y-2.5 sm:space-y-3.5 md:space-y-4 max-w-4xl">
 
           {/* 1. Logo Markaz Fiqih */}
           <motion.img
@@ -146,29 +146,29 @@ function HeroSection({
             transition={{ duration: 0.4 }}
             src="/logo.png"
             alt="Markaz Fiqih"
-            className="h-7 sm:h-9 lg:h-11 max-h-[6vh] w-auto brightness-0 invert"
+            className="h-6 sm:h-8 lg:h-10 max-h-[5vh] w-auto brightness-0 invert"
           />
 
           {/* 2. Ahlan wa Sahlan di & 3. Kelas Markaz Fiqih */}
           <h1 className="font-['Plus_Jakarta_Sans',sans-serif] leading-[1.08] tracking-tight">
             <span
-              className="block text-xl sm:text-2xl lg:text-3xl font-semibold italic mb-1"
+              className="block text-lg sm:text-2xl lg:text-3xl font-semibold italic mb-0.5"
               style={{ color: 'hsl(var(--accent))' }}
             >
               Ahlan wa Sahlan di
             </span>
-            <span className="block text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white">
+            <span className="block text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white">
               Kelas Markaz Fiqih
             </span>
           </h1>
 
           {/* 4. Subtitle Deskripsi */}
-          <p className="font-['Plus_Jakarta_Sans',sans-serif] text-white/90 text-xs sm:text-base lg:text-lg leading-relaxed max-w-2xl font-medium px-2">
+          <p className="font-['Plus_Jakarta_Sans',sans-serif] text-white/90 text-xs sm:text-sm lg:text-base leading-relaxed max-w-xl font-medium px-2">
             Tempat Belajar Fiqih Madzhab Syafi'i Yang Sistematis dan Terstruktur
           </p>
 
           {/* 5. CTA Buttons */}
-          <div className="pt-1 sm:pt-2 flex flex-wrap justify-center items-center gap-2.5 sm:gap-3.5 font-['Plus_Jakarta_Sans',sans-serif]">
+          <div className="pt-1 flex flex-wrap justify-center items-center gap-2 sm:gap-3 font-['Plus_Jakarta_Sans',sans-serif]">
             <motion.div
               className="inline-block"
               whileHover={{ scale: 1.02 }}
@@ -178,7 +178,7 @@ function HeroSection({
               <Button
                 asChild
                 size="lg"
-                className="h-[44px] sm:h-[48px] px-6 sm:px-8 text-sm sm:text-base font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg font-['Plus_Jakarta_Sans',sans-serif]"
+                className="h-[40px] sm:h-[46px] px-5 sm:px-7 text-xs sm:text-sm font-semibold rounded-[10px] text-primary-foreground hover:opacity-90 shadow-lg font-['Plus_Jakarta_Sans',sans-serif]"
                 style={{ backgroundColor: 'hsl(var(--accent))' }}
               >
                 <Link href="/katalog">Mulai Belajar</Link>
@@ -194,11 +194,11 @@ function HeroSection({
                 asChild
                 variant="ghost"
                 size="lg"
-                className="h-[44px] sm:h-[48px] px-5 sm:px-7 text-sm sm:text-base font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25 font-['Plus_Jakarta_Sans',sans-serif]"
+                className="h-[40px] sm:h-[46px] px-4 sm:px-6 text-xs sm:text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 rounded-[10px] border border-white/25 font-['Plus_Jakarta_Sans',sans-serif]"
               >
                 <Link href="/katalog">
                   Lihat Kelas Tersedia
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                 </Link>
               </Button>
             </motion.div>
@@ -210,7 +210,7 @@ function HeroSection({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="pt-3 sm:pt-4 border-t border-white/15 w-full max-w-xl mx-auto text-center shrink-0 mb-1 sm:mb-3 lg:mb-4 font-['Plus_Jakarta_Sans',sans-serif]"
+          className="pt-2 sm:pt-3 border-t border-white/15 w-full max-w-lg mx-auto text-center shrink-0 mb-1 sm:mb-2 font-['Plus_Jakarta_Sans',sans-serif]"
         >
           <p className="text-[10px] sm:text-xs uppercase tracking-widest text-white/80 font-bold mb-0.5 font-['Plus_Jakarta_Sans',sans-serif]">
             Markaz Fiqih
