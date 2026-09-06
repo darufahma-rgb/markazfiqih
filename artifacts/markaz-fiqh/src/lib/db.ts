@@ -22,6 +22,12 @@ export type EnrollmentItem = {
     totalDarsCount: number;
     completedDarsCount: number;
     totalDurationMinutes: number;
+    /** Kelas berbasis playlist YouTube (tanpa breakdown modul/dars). */
+    youtubePlaylistId: string | null;
+    /** Total pertemuan — hanya berarti untuk kelas playlist; null kalau admin belum mengisi. */
+    meetingCount: number | null;
+    /** Jumlah pertemuan yang sudah ditandai selesai — hanya untuk kelas playlist. */
+    completedMeetingsCount: number;
   };
 };
 
@@ -845,6 +851,7 @@ export async function listEnrollments(userId: string): Promise<EnrollmentItem[]>
       id, enrolled_at, is_completed,
       classes (
         id, title, cover_image, base_price, discount_price, level, category,
+        youtube_playlist_id, meeting_count,
         instructors ( id, name, photo_url ),
         modules ( id, dars ( id, duration_minutes ) )
       )
@@ -860,6 +867,21 @@ export async function listEnrollments(userId: string): Promise<EnrollmentItem[]>
     .eq('user_id', userId);
   if (progressError) throw progressError;
   const completedDarsIds = new Set((progressRows ?? []).map((p: any) => p.dars_id as string));
+
+  // Satu query untuk semua pertemuan playlist yang sudah ditandai selesai —
+  // dipakai kelas berbasis YouTube playlist (yang tidak punya modul/dars).
+  const { data: completionRows, error: completionError } = await supabase
+    .from('video_completions')
+    .select('class_id, video_index')
+    .eq('user_id', userId);
+  if (completionError) throw completionError;
+  const completedMeetingsByClass = new Map<string, Set<number>>();
+  (completionRows ?? []).forEach((r: any) => {
+    const key = r.class_id as string;
+    const set = completedMeetingsByClass.get(key) ?? new Set<number>();
+    set.add(r.video_index as number);
+    completedMeetingsByClass.set(key, set);
+  });
 
   // Ambil kapan terakhir nonton per kelas (dipakai untuk sorting dashboard)
   const { data: watchRows, error: watchError } = await supabase
@@ -906,6 +928,9 @@ export async function listEnrollments(userId: string): Promise<EnrollmentItem[]>
             (acc: number, d: any) => acc + (d.duration_minutes ?? 0),
             0,
           ) as number,
+          youtubePlaylistId: (cls.youtube_playlist_id ?? null) as string | null,
+          meetingCount: (cls.meeting_count ?? null) as number | null,
+          completedMeetingsCount: completedMeetingsByClass.get(cls.id as string)?.size ?? 0,
         },
       };
     });
@@ -1015,11 +1040,35 @@ export async function listAllVouchersForAdmin(): Promise<AdminVoucher[]> {
   }));
 }
 
+export type VoucherDiscountMode = 'percent' | 'nominal' | 'final';
+
+/**
+ * Hitung harga akhir dari harga normal sesuai mode potongannya (Revisi 1
+ * Bulan: "Untuk kode akses khusus, apa bisa dibuat potongannya opsional,
+ * bisa nominal atau diskon"). `discount_price` di tabel `class_vouchers`
+ * selalu menyimpan HARGA AKHIR — mode di sini hanya cara admin menginput,
+ * bukan cara datanya disimpan.
+ */
+export function computeVoucherFinalPrice(
+  normalPrice: number,
+  mode: VoucherDiscountMode,
+  value: number,
+): number {
+  switch (mode) {
+    case 'percent':
+      return Math.max(0, Math.round(normalPrice * (1 - value / 100)));
+    case 'nominal':
+      return Math.max(0, Math.round(normalPrice - value));
+    case 'final':
+      return Math.max(0, Math.round(value));
+  }
+}
+
 export async function createVoucher(payload: {
   classId: string;
   code: string;
-  discountPrice?: number;
-  discountPercent?: number;
+  discountMode: VoucherDiscountMode;
+  discountValue: number;
   maxUses: number | null;
 }): Promise<void> {
   const code = payload.code.trim().toUpperCase();
@@ -1030,15 +1079,10 @@ export async function createVoucher(payload: {
 
     const vouchersToInsert = classes.map((c) => {
       const normalPrice = c.discountPrice ?? c.basePrice;
-      const discountPrice =
-        payload.discountPercent !== undefined
-          ? Math.max(0, Math.round(normalPrice * (1 - payload.discountPercent / 100)))
-          : (payload.discountPrice ?? 0);
-
       return {
         class_id: c.id,
         code,
-        discount_price: discountPrice,
+        discount_price: computeVoucherFinalPrice(normalPrice, payload.discountMode, payload.discountValue),
         max_uses: payload.maxUses,
         is_active: true,
       };
@@ -1047,18 +1091,15 @@ export async function createVoucher(payload: {
     const { error } = await supabase.from('class_vouchers').insert(vouchersToInsert);
     if (error) throw error;
   } else {
-    let finalDiscountPrice = payload.discountPrice ?? 0;
-    if (payload.discountPercent !== undefined) {
-      const { data: cls } = await supabase
-        .from('classes')
-        .select('base_price, discount_price')
-        .eq('id', payload.classId)
-        .single();
-      if (cls) {
-        const normalPrice = cls.discount_price ?? cls.base_price;
-        finalDiscountPrice = Math.max(0, Math.round(normalPrice * (1 - payload.discountPercent / 100)));
-      }
-    }
+    const { data: cls, error: clsError } = await supabase
+      .from('classes')
+      .select('base_price, discount_price')
+      .eq('id', payload.classId)
+      .single();
+    if (clsError) throw clsError;
+
+    const normalPrice = cls.discount_price ?? cls.base_price;
+    const finalDiscountPrice = computeVoucherFinalPrice(normalPrice, payload.discountMode, payload.discountValue);
 
     const { error } = await supabase.from('class_vouchers').insert({
       class_id: payload.classId,
@@ -1142,41 +1183,46 @@ export async function completeEnrollment(params: string | { userId: string; clas
   const enrollmentId = typeof params === 'string' ? params : params.enrollmentId;
 
   if (enrollmentId) {
-    await supabase
+    const { error } = await supabase
       .from('enrollments')
       .update({ is_completed: true })
       .eq('id', enrollmentId);
+    if (error) throw error;
   }
 
   if (userId && classId) {
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('enrollments')
       .select('id')
       .eq('user_id', userId)
       .eq('class_id', classId)
       .maybeSingle();
+    if (existingError) throw existingError;
 
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from('enrollments')
         .update({ is_completed: true })
         .eq('id', existing.id);
+      if (error) throw error;
     } else {
-      await supabase
+      const { error } = await supabase
         .from('enrollments')
         .insert({
           user_id: userId,
           class_id: classId,
           is_completed: true,
         });
+      if (error) throw error;
     }
 
     // Fetch semua dars_id dari kelas ini & tandai 100% selesai di tabel progress
-    const { data: classData } = await supabase
+    const { data: classData, error: classError } = await supabase
       .from('classes')
       .select('modules(dars(id))')
       .eq('id', classId)
       .maybeSingle();
+    if (classError) throw classError;
 
     const darsIds: string[] = (classData?.modules ?? []).flatMap((m: any) =>
       (m.dars ?? []).map((d: any) => d.id),
@@ -1187,10 +1233,13 @@ export async function completeEnrollment(params: string | { userId: string; clas
         user_id: userId,
         dars_id: darsId,
       }));
-      await supabase.from('progress').upsert(progressInserts, { onConflict: 'user_id,dars_id' });
+      const { error } = await supabase
+        .from('progress')
+        .upsert(progressInserts, { onConflict: 'user_id,dars_id' });
+      if (error) throw error;
     }
 
-    await supabase.from('video_watch_progress').upsert(
+    const { error: watchError } = await supabase.from('video_watch_progress').upsert(
       {
         user_id: userId,
         class_id: classId,
@@ -1198,7 +1247,39 @@ export async function completeEnrollment(params: string | { userId: string; clas
       },
       { onConflict: 'user_id,class_id' },
     );
+    if (watchError) throw watchError;
   }
+}
+
+/**
+ * Batalkan tanda "kelas selesai" (Revisi 1 Bulan — kelasmarkazfiqih.com:
+ * "Kelas telah ditandai selesai buat bisa dibatalkan"). Khusus mengembalikan
+ * flag `enrollments.is_completed` ke false — SENGAJA tidak menghapus
+ * progress per-dars/pertemuan yang sudah tercatat, supaya riwayat menonton
+ * pelajar tidak ikut hilang hanya karena membatalkan status "selesai".
+ */
+export async function uncompleteEnrollment(params: {
+  userId: string;
+  classId: string;
+  enrollmentId?: string | null;
+}): Promise<void> {
+  const { userId, classId, enrollmentId } = params;
+
+  if (enrollmentId) {
+    const { error } = await supabase
+      .from('enrollments')
+      .update({ is_completed: false })
+      .eq('id', enrollmentId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase
+    .from('enrollments')
+    .update({ is_completed: false })
+    .eq('user_id', userId)
+    .eq('class_id', classId);
+  if (error) throw error;
 }
 
 // ─── ADMIN TESTIMONIALS CRUD ─────────────────────────────────────────────────
@@ -2150,6 +2231,22 @@ export async function upsertClassMeetingTitle(params: {
   if (error) throw error;
 }
 
+/**
+ * Hapus SEMUA baris "Judul per Pertemuan" milik satu kelas. Dipakai sebelum
+ * menyimpan ulang set baris yang sedang ada di form admin (Revisi 1 Bulan:
+ * "Judul per pertemuan tidak work") — tanpa ini, baris yang dihapus admin di
+ * form (removeMeetingTitleRow menggeser nomor urut baris lain, bukan
+ * menghapus dari DB) akan tertinggal sebagai data basi di video_index
+ * terakhir yang sudah tidak ada baris form-nya lagi.
+ */
+export async function deleteClassMeetingTitlesForClass(classId: string): Promise<void> {
+  const { error } = await supabase
+    .from('class_meeting_titles')
+    .delete()
+    .eq('class_id', classId);
+  if (error) throw error;
+}
+
 // ── Admin: Kelola Review (Prompt 125) ─────────────────────────────────────────
 
 export type AdminReviewRow = {
@@ -2599,6 +2696,23 @@ export async function markVideoCompleted(params: {
   if (error) throw error;
 }
 
+/** Lepas centang "pertemuan selesai". Butuh migrasi
+ *  `video_completions_delete_policy.sql` (policy DELETE) sebelum ini bisa
+ *  berhasil — tabelnya semula hanya punya policy SELECT/INSERT/UPDATE. */
+export async function unmarkVideoCompleted(params: {
+  userId: string;
+  classId: string;
+  videoIndex: number;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('video_completions')
+    .delete()
+    .eq('user_id', params.userId)
+    .eq('class_id', params.classId)
+    .eq('video_index', params.videoIndex);
+  if (error) throw error;
+}
+
 // ─── ADMIN BUNDLES CRUD ───────────────────────────────────────────────────────
 
 export type AdminBundle = {
@@ -2933,7 +3047,9 @@ export async function requestCertificate(params: {
   classId: string;
   fullName: string;
   email: string;
-  score: string;
+  /** Tidak lagi diisi dari form (Revisi 1 Bulan: "kolom nilai soal latihan
+   *  dihapus saja"). Kolomnya dipertahankan untuk sertifikat lama. */
+  score?: string;
 }): Promise<CertificateRequest> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Harus login untuk mengambil sertifikat.');

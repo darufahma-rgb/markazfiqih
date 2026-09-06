@@ -42,7 +42,7 @@ export default function LoginPage() {
         />
 
         <div className="relative z-10 flex items-center gap-3">
-          <img src="/logo.png" alt="Markaz Fiqih" className="h-8 w-auto brightness-0 invert" />
+          <img src="/logo-white.png" alt="Markaz Fiqih" className="h-8 w-auto" />
         </div>
 
         <div className="relative z-10 max-w-lg space-y-6">

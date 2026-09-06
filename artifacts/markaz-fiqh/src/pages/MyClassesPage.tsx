@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PlayCircle,
+  PlaySquare,
   BookOpen,
   Clock,
   CheckCircle2,
@@ -36,9 +37,19 @@ function formatDuration(min: number | null) {
 // ── KelasCard ─────────────────────────────────────────────────────────────────
 function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: number }) {
   const cls = enrollment.class;
-  const { totalDarsCount, completedDarsCount, totalDurationMinutes } = cls;
-  const pct = totalDarsCount > 0 ? Math.round((completedDarsCount / totalDarsCount) * 100) : 0;
-  const isComplete = totalDarsCount > 0 ? pct === 100 : enrollment.isCompleted;
+  const { totalDurationMinutes } = cls;
+
+  // Kelas berbasis playlist YouTube tidak punya modul/dars — progress dan
+  // hitungan pelajarannya diukur dari video_completions vs meeting_count,
+  // bukan dari totalDarsCount (yang untuk kelas ini selalu 0).
+  const isPlaylistClass = !!cls.youtubePlaylistId && cls.moduleCount === 0;
+  const total = isPlaylistClass ? cls.meetingCount ?? 0 : cls.totalDarsCount;
+  const completed = isPlaylistClass ? cls.completedMeetingsCount : cls.completedDarsCount;
+  const hasStats = total > 0;
+  const unitLabel = isPlaylistClass ? 'pertemuan' : 'pelajaran';
+
+  const pct = hasStats ? Math.round((completed / total) * 100) : 0;
+  const isComplete = hasStats ? pct === 100 : enrollment.isCompleted;
   const learnUrl = `/learn/${cls.id}`;
 
   return (
@@ -94,39 +105,52 @@ function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: n
         </h3>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <BookOpen className="w-3.5 h-3.5" />
-            {cls.moduleCount} modul · {totalDarsCount} pelajaran
-          </span>
+          {isPlaylistClass ? (
+            hasStats && (
+              <span className="flex items-center gap-1">
+                <PlaySquare className="w-3.5 h-3.5" />
+                {total} pertemuan
+              </span>
+            )
+          ) : (
+            <span className="flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5" />
+              {cls.moduleCount} modul · {total} pelajaran
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
             {formatDuration(totalDurationMinutes)}
           </span>
         </div>
 
-        {/* Progress Tracker */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground text-xs">
-              {completedDarsCount} dari {totalDarsCount} pelajaran selesai
-            </span>
-            <span
-              className={`font-bold text-sm ${
-                isComplete ? 'text-success' : pct > 0 ? 'text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              {pct}% Selesai
-            </span>
+        {/* Progress Tracker — disembunyikan kalau tidak ada data akurat untuk
+            dihitung (kelas playlist tanpa meeting_count), daripada menampilkan
+            "0 dari 0" yang membingungkan pelajar. */}
+        {hasStats && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground text-xs">
+                {completed} dari {total} {unitLabel} selesai
+              </span>
+              <span
+                className={`font-bold text-sm ${
+                  isComplete ? 'text-success' : pct > 0 ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                {pct}% Selesai
+              </span>
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                className={`h-full rounded-full ${isComplete ? 'bg-success-pale0' : 'bg-primary'}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.7, ease: 'easeOut', delay: index * 0.1 + 0.2 }}
+              />
+            </div>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <motion.div
-              className={`h-full rounded-full ${isComplete ? 'bg-success-pale0' : 'bg-primary'}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.7, ease: 'easeOut', delay: index * 0.1 + 0.2 }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* CTA */}
         <div className="mt-auto pt-1">

@@ -43,11 +43,34 @@ function PaymentContent({ invoiceId }: { invoiceId: string }) {
     enabled: status?.status === 'paid',
   });
 
-  // Segarkan keranjang & kelas saya begitu pembayaran masuk.
+  // Segarkan seluruh cache "milik user" begitu pembayaran masuk — bukan cuma
+  // ['enrollments'] (dipakai Kelas Saya/Dashboard), tapi juga
+  // ['enrolled-class-ids'] yang dipakai Katalog, Detail Kelas, Bundle, dan
+  // Keranjang untuk menentukan status "sudah dimiliki", dan ['my-ebooks']
+  // untuk pembelian e-book. Sebelumnya key ini tidak pernah disegarkan di
+  // sini, jadi halaman-halaman itu tetap menampilkan "belum dimiliki" sampai
+  // di-refresh manual walau pembayaran sudah masuk.
   useEffect(() => {
     if (status?.status !== 'paid' || !user) return;
-    queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
-    queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+
+    const refreshOwnedData = () => {
+      queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['enrolled-class-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['my-ebooks'] });
+    };
+
+    refreshOwnedData();
+
+    // fulfillInvoice() menulis invoices.status='paid' DULU, baru membuat baris
+    // enrollments/ebook_purchases sesudahnya (lihat _shared/fulfillment.ts).
+    // Kalau transisi ini dipicu webhook Mayar (bukan polling kita sendiri),
+    // ada jendela singkat di mana status sudah 'paid' tapi baris akses belum
+    // tertulis — refetch pertama bisa menangkap data lama lalu terkunci
+    // "fresh" selama staleTime. Ulangi sekali lagi setelah jeda untuk
+    // menutup jendela balap itu.
+    const retryId = setTimeout(refreshOwnedData, 2500);
+    return () => clearTimeout(retryId);
   }, [status?.status, user, queryClient]);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function extractPlaylistId(input: string): string {
   const trimmed = input.trim();
@@ -86,6 +86,7 @@ import {
   deleteClass,
   getClassMeetingTitles,
   upsertClassMeetingTitle,
+  deleteClassMeetingTitlesForClass,
   bulkUpdateDarsVideos,
   listModulesForClass,
   createModule,
@@ -1018,34 +1019,61 @@ export default function AdminClassesPage() {
   const invalidateClasses = () =>
     queryClient.invalidateQueries({ queryKey: ['classes', 'admin'] });
 
+  // Penyimpanan judul per pertemuan dijalankan DI DALAM mutationFn (bukan di
+  // onSuccess) supaya kegagalannya ikut ditangkap onError — sebelumnya kalau
+  // saveMeetingTitles() gagal di dalam onSuccess yang async, tidak ada
+  // onError maupun toast apa pun yang terpanggil; dialog cuma diam tanpa
+  // penjelasan (Revisi 1 Bulan: "Judul per pertemuan tidak work").
   const createMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof createClass>[0]) => createClass(payload),
-    onSuccess: async (created: any) => {
-      invalidateClasses();
-      if (created?.id && meetingTitleRows.length > 0) {
-        await saveMeetingTitles(created.id);
+    mutationFn: async (payload: Parameters<typeof createClass>[0]) => {
+      const created = await createClass(payload);
+      if ((created as any)?.id) {
+        try {
+          await saveMeetingTitles((created as any).id, { isNewClass: true });
+        } catch (titleError) {
+          throw new Error(
+            `Kelas berhasil ditambahkan, tapi judul per pertemuan gagal disimpan: ${
+              titleError instanceof Error ? titleError.message : String(titleError)
+            }`,
+          );
+        }
       }
+      return created;
+    },
+    onSuccess: () => {
       toast({ title: 'Kelas berhasil ditambahkan' });
       setDialogOpen(false);
     },
     onError: (error) => {
       toast({ title: 'Gagal menambahkan kelas', description: String((error as Error)?.message ?? error), variant: 'destructive' });
     },
+    onSettled: () => {
+      invalidateClasses();
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateClass>[1] }) =>
-      updateClass(id, data),
-    onSuccess: async (_result, variables) => {
-      invalidateClasses();
-      if (meetingTitleRows.length > 0) {
-        await saveMeetingTitles(variables.id);
+    mutationFn: async ({ id, data }: { id: string; data: Parameters<typeof updateClass>[1] }) => {
+      await updateClass(id, data);
+      try {
+        await saveMeetingTitles(id);
+      } catch (titleError) {
+        throw new Error(
+          `Kelas berhasil diperbarui, tapi judul per pertemuan gagal disimpan: ${
+            titleError instanceof Error ? titleError.message : String(titleError)
+          }`,
+        );
       }
+    },
+    onSuccess: () => {
       toast({ title: 'Kelas berhasil diperbarui' });
       setDialogOpen(false);
     },
     onError: (error) => {
       toast({ title: 'Gagal memperbarui kelas', description: String((error as Error)?.message ?? error), variant: 'destructive' });
+    },
+    onSettled: () => {
+      invalidateClasses();
     },
   });
 
@@ -1076,9 +1104,20 @@ export default function AdminClassesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingClassDetail]);
 
-  // ── Sinkronkan baris "Judul per Pertemuan" saat data tersimpan berhasil dimuat (Prompt 127) ──
+  // ── Sinkronkan baris "Judul per Pertemuan" saat data tersimpan dimuat (Prompt 127) ──
+  // Dijalankan SEKALI per pembukaan dialog untuk kelas yang sama (dikunci
+  // lewat ref `syncedMeetingTitlesForId`), bukan setiap kali `existingMeetingTitles`
+  // berubah referensi. getClassMeetingTitles() selalu mengembalikan objek Map
+  // BARU tiap fetch — tanpa penjaga ini, background refetch apa pun saat
+  // dialog masih terbuka akan menimpa ulang baris yang baru diketik admin
+  // dan belum sempat disimpan (Revisi 1 Bulan: "Judul per pertemuan tidak work").
+  const syncedMeetingTitlesForId = useRef<string | null>(null);
   useEffect(() => {
-    if (existingMeetingTitles && editingClass) {
+    if (!dialogOpen) {
+      syncedMeetingTitlesForId.current = null;
+      return;
+    }
+    if (existingMeetingTitles && editingClass && syncedMeetingTitlesForId.current !== editingId) {
       const maxIndex = existingMeetingTitles.size > 0 ? Math.max(...existingMeetingTitles.keys()) : -1;
       const rows: MeetingTitleRow[] = [];
       for (let i = 0; i <= maxIndex; i++) {
@@ -1086,9 +1125,9 @@ export default function AdminClassesPage() {
         rows.push({ videoIndex: i, title: saved?.title ?? '', description: saved?.description ?? '' });
       }
       setMeetingTitleRows(rows);
+      syncedMeetingTitlesForId.current = editingId;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [existingMeetingTitles]);
+  }, [existingMeetingTitles, editingClass, editingId, dialogOpen]);
 
   function addMeetingTitleRow() {
     setMeetingTitleRows((rows) => [
@@ -1109,24 +1148,48 @@ export default function AdminClassesPage() {
     );
   }
 
-  async function saveMeetingTitles(classId: string) {
-    await Promise.all(
-      meetingTitleRows.map((row) =>
-        upsertClassMeetingTitle({
-          classId,
-          videoIndex: row.videoIndex,
-          title: row.title,
-          description: row.description,
-        }),
-      ),
-    );
+  async function saveMeetingTitles(classId: string, opts?: { isNewClass?: boolean }) {
+    // PENJAGA: hanya sentuh judul pertemuan kalau isi form memang milik kelas
+    // ini DAN sudah selesai dimuat dari server. Tanpa penjaga ini, langkah
+    // "hapus semua lalu simpan ulang" di bawah bisa menghapus judul yang
+    // sudah tersimpan, karena updateMutation juga dipakai oleh tombol
+    // "Jadikan Draft"/"Terbitkan" di tabel — yang tidak pernah membuka dialog
+    // sehingga meetingTitleRows masih kosong (atau malah berisi sisa milik
+    // kelas lain yang tadi dibuka).
+    // Kelas baru dikecualikan: belum punya baris tersimpan yang bisa hilang.
+    if (!opts?.isNewClass && syncedMeetingTitlesForId.current !== classId) return;
+
+    // Hapus dulu SEMUA baris lama kelas ini, baru simpan ulang set yang
+    // sedang ada di form — supaya baris yang dihapus admin lewat
+    // removeMeetingTitleRow() (yang cuma menggeser nomor urut baris lain di
+    // state lokal, tidak pernah menghapus dari DB) tidak tertinggal jadi
+    // data basi di video_index yang sudah tidak ada baris form-nya lagi.
+    await deleteClassMeetingTitlesForClass(classId);
+    if (meetingTitleRows.length > 0) {
+      await Promise.all(
+        meetingTitleRows.map((row) =>
+          upsertClassMeetingTitle({
+            classId,
+            videoIndex: row.videoIndex,
+            title: row.title,
+            description: row.description,
+          }),
+        ),
+      );
+    }
     queryClient.invalidateQueries({ queryKey: ['class-meeting-titles', classId] });
     queryClient.invalidateQueries({ queryKey: ['class-meeting-titles', 'admin', classId] });
   }
 
+  // Tabel manajemen ini diurutkan A-Z berdasarkan judul supaya gampang dicari
+  // saat mengelola (Revisi 1 Bulan: "Urutan manajemen kelas disini sesuai
+  // abjad saja sidi a-z, agak kesulitan ketika lagi manage"). Kolom "Urutan"
+  // tetap menampilkan display_order apa adanya — itu yang dipakai Katalog &
+  // Beranda (diatur lewat drag & drop di Admin > Tata Letak Katalog), cuma
+  // urutan BARIS di tabel ini yang tidak lagi mengikutinya.
   const filtered = classes
     .filter((c) => c.title.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    .sort((a, b) => a.title.localeCompare(b.title, 'id', { sensitivity: 'base' }));
 
   function openCreateDialog() {
     setEditingClass(null);

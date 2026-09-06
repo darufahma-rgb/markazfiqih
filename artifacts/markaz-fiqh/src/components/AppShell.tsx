@@ -49,7 +49,7 @@ function SidebarContent({
     <div className="flex flex-col h-full max-h-dvh w-full overflow-hidden bg-gradient-to-b from-primary to-[hsl(var(--brand-red-hover))]">
       <div className="h-16 flex items-center px-6 border-b border-[hsl(var(--accent))]/30 shrink-0">
         <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-          <img src="/logo.png" alt="Markaz Fiqih" className="h-7 w-auto brightness-0 invert" />
+          <img src="/logo-white.png" alt="Markaz Fiqih" className="h-7 w-auto" />
         </Link>
       </div>
 
@@ -158,7 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           href="/"
           className="absolute left-1/2 -translate-x-1/2 flex items-center transition-opacity hover:opacity-90"
         >
-          <img src="/logo.png" alt="Markaz Fiqih" className="h-7 w-auto shrink-0 brightness-0 invert" />
+          <img src="/logo-white.png" alt="Markaz Fiqih" className="h-7 w-auto shrink-0" />
         </Link>
 
         {/* 3. Kanan: Ikon Notifikasi */}

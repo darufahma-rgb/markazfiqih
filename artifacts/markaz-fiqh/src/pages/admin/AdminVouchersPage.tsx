@@ -51,22 +51,38 @@ import {
   deleteVoucher,
   checkVoucherHasInvoices,
   listClasses,
+  computeVoucherFinalPrice,
   type AdminVoucher,
+  type VoucherDiscountMode,
 } from '@/lib/db';
 
 // ─── Form state ───────────────────────────────────────────────────────────────
 type VoucherFormState = {
   classId: string;
   code: string;
-  discountPercent: string;
+  discountMode: VoucherDiscountMode;
+  discountValue: string;
   maxUses: string;
 };
 
 const EMPTY_FORM: VoucherFormState = {
   classId: '',
   code: '',
-  discountPercent: '',
+  discountMode: 'percent',
+  discountValue: '',
   maxUses: '',
+};
+
+const DISCOUNT_MODE_LABEL: Record<VoucherDiscountMode, string> = {
+  percent: 'Persentase Diskon (%)',
+  nominal: 'Potongan Harga (Rp)',
+  final: 'Harga Akhir (Rp)',
+};
+
+const DISCOUNT_MODE_HELP: Record<VoucherDiscountMode, string> = {
+  percent: 'Nilai yang dimasukkan adalah persentase potongan harga (0% - 100%), bukan harga akhir produk/kelas. Isi 100% untuk gratis 100%.',
+  nominal: 'Nilai yang dimasukkan langsung dikurangkan dari harga normal kelas. Isi 0 untuk tanpa potongan.',
+  final: 'Nilai yang dimasukkan langsung dipakai sebagai harga akhir kelas. Isi 0 untuk gratis 100%.',
 };
 
 const isFkError = (msg: string) =>
@@ -206,10 +222,17 @@ export default function AdminVouchersPage() {
     setFormWarning(null);
   }
 
-  function handleDiscountPercentChange(value: string) {
-    setForm((p) => ({ ...p, discountPercent: value }));
-    const percent = Number(value);
-    if (!isNaN(percent) && (percent < 0 || percent > 100)) {
+  function handleDiscountModeChange(mode: VoucherDiscountMode) {
+    setForm((p) => ({ ...p, discountMode: mode, discountValue: '' }));
+    setFormWarning(null);
+  }
+
+  function handleDiscountValueChange(value: string) {
+    setForm((p) => ({ ...p, discountValue: value }));
+    const num = Number(value);
+    if (isNaN(num) || num < 0) {
+      setFormWarning(num < 0 ? 'Nilai potongan tidak boleh negatif.' : null);
+    } else if (form.discountMode === 'percent' && num > 100) {
       setFormWarning('Persentase diskon harus di antara 0% s.d. 100%.');
     } else {
       setFormWarning(null);
@@ -226,8 +249,12 @@ export default function AdminVouchersPage() {
       toast({ title: 'Kode akses khusus wajib diisi', variant: 'destructive' });
       return;
     }
-    const discountPercent = Number(form.discountPercent);
-    if (isNaN(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+    const discountValue = Number(form.discountValue);
+    if (isNaN(discountValue) || discountValue < 0) {
+      toast({ title: 'Nilai potongan harus berupa angka ≥ 0', variant: 'destructive' });
+      return;
+    }
+    if (form.discountMode === 'percent' && discountValue > 100) {
       toast({ title: 'Persentase diskon harus berupa angka antara 0% s.d. 100%', variant: 'destructive' });
       return;
     }
@@ -236,10 +263,31 @@ export default function AdminVouchersPage() {
       toast({ title: 'Batas pemakaian harus berupa angka ≥ 1, atau kosongkan untuk tanpa batas', variant: 'destructive' });
       return;
     }
-    createMutation.mutate({ classId: form.classId, code: form.code, discountPercent, maxUses });
+    createMutation.mutate({
+      classId: form.classId,
+      code: form.code,
+      discountMode: form.discountMode,
+      discountValue,
+      maxUses,
+    });
   }
 
   const isSaving = createMutation.isPending;
+
+  // Pratinjau harga akhir — hanya bisa dihitung untuk satu kelas spesifik
+  // (harga normal tiap kelas beda, jadi "Semua Kelas" tidak punya satu angka).
+  const selectedClass =
+    form.classId && form.classId !== 'ALL_CLASSES'
+      ? classes.find((c) => c.id === form.classId)
+      : null;
+  const selectedClassNormalPrice = selectedClass
+    ? selectedClass.discountPrice ?? selectedClass.basePrice
+    : null;
+  const discountValueNum = Number(form.discountValue);
+  const previewFinalPrice =
+    selectedClassNormalPrice !== null && form.discountValue.trim() !== '' && !isNaN(discountValueNum) && discountValueNum >= 0
+      ? computeVoucherFinalPrice(selectedClassNormalPrice, form.discountMode, discountValueNum)
+      : null;
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -414,22 +462,49 @@ export default function AdminVouchersPage() {
                 </p>
               </div>
 
-              {/* Persentase Diskon / Potongan Harga (%) */}
+              {/* Jenis Potongan */}
               <div className="space-y-2">
-                <Label htmlFor="voucher-percent">Persentase Diskon (%) / Potongan Harga (%)</Label>
+                <Label htmlFor="voucher-discount-mode">Jenis Potongan</Label>
+                <Select value={form.discountMode} onValueChange={(v) => handleDiscountModeChange(v as VoucherDiscountMode)}>
+                  <SelectTrigger id="voucher-discount-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percent">Persentase (%)</SelectItem>
+                    <SelectItem value="nominal">Potongan Nominal (Rp)</SelectItem>
+                    <SelectItem value="final">Harga Akhir (Rp)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Nilai Potongan — label, placeholder, dan helper text mengikuti Jenis Potongan */}
+              <div className="space-y-2">
+                <Label htmlFor="voucher-discount-value">{DISCOUNT_MODE_LABEL[form.discountMode]}</Label>
                 <Input
-                  id="voucher-percent"
+                  id="voucher-discount-value"
                   type="number"
                   min={0}
-                  max={100}
-                  placeholder="20"
-                  value={form.discountPercent}
-                  onChange={(e) => handleDiscountPercentChange(e.target.value)}
+                  max={form.discountMode === 'percent' ? 100 : undefined}
+                  placeholder={form.discountMode === 'percent' ? '20' : '20000'}
+                  value={form.discountValue}
+                  onChange={(e) => handleDiscountValueChange(e.target.value)}
                   required
                 />
-                <p className="text-xs text-muted-foreground">
-                  Nilai yang dimasukkan adalah persentase potongan harga (0% - 100%), bukan harga akhir produk/kelas. Isi 100% untuk gratis 100%.
-                </p>
+                <p className="text-xs text-muted-foreground">{DISCOUNT_MODE_HELP[form.discountMode]}</p>
+                {previewFinalPrice !== null && (
+                  <p className="text-xs text-foreground">
+                    Harga akhir untuk <strong>{selectedClass?.title}</strong>:{' '}
+                    <strong className="text-primary">{formatPrice(previewFinalPrice)}</strong>
+                    {selectedClassNormalPrice !== null && (
+                      <span className="text-muted-foreground"> (normal {formatPrice(selectedClassNormalPrice)})</span>
+                    )}
+                  </p>
+                )}
+                {form.classId === 'ALL_CLASSES' && (
+                  <p className="text-xs text-muted-foreground">
+                    Harga akhir dihitung otomatis per kelas saat kode dibuat, karena harga normal tiap kelas berbeda.
+                  </p>
+                )}
                 {formWarning && (
                   <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 p-3 text-amber-800 dark:text-amber-200">
                     <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />

@@ -283,7 +283,7 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
             {/* Header: Logo & Title */}
             <div className="relative z-10 flex flex-col items-center gap-[1.5cqw]">
               <img
-                src="/logo.png"
+                src="/logo-icon.png"
                 alt="Markaz Fiqih"
                 className="h-[6cqw] w-auto object-contain"
               />

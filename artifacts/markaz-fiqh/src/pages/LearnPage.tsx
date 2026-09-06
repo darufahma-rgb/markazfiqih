@@ -22,6 +22,7 @@ declare global {
         cueVideoById: (videoId: string, startSeconds?: number) => void;
         seekTo: (seconds: number, allowSeekAhead: boolean) => void;
         playVideo: () => void;
+        unloadModule: (moduleName: string) => void;
         destroy: () => void;
       };
     };
@@ -34,6 +35,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import { CertificateView } from '@/components/CertificateView';
 import {
   ArrowLeft,
@@ -70,10 +81,12 @@ import {
   listClasses,
   updateProgress as updateProgressFn,
   completeEnrollment as completeEnrollmentFn,
+  uncompleteEnrollment as uncompleteEnrollmentFn,
   getVideoWatchProgress,
   saveVideoWatchProgress,
   getVideoCompletions,
   markVideoCompleted,
+  unmarkVideoCompleted,
   getInstructorRatingForClass,
   submitInstructorRating,
   getClassMeetingTitles,
@@ -98,6 +111,18 @@ function formatDuration(min: number | null) {
 // ── Flatten all dars for prev/next navigation ─────────────────────────────────
 function flattenDars(modules: ClassDarsModule[]): { dars: DarsItem; module: ClassDarsModule }[] {
   return modules.flatMap((m) => m.dars.map((d) => ({ dars: d, module: m })));
+}
+
+// ── Matikan subtitle/CC otomatis ──────────────────────────────────────────────
+// `cc_load_policy: 0` di playerVars saja TIDAK cukup — YouTube API resminya
+// hanya menjamin nilai `1` (paksa nyala); tidak menyala tetap bisa mengikuti
+// preferensi akun/browser penonton. unloadModule adalah cara yang benar-benar
+// mematikannya (Revisi 1 Bulan: "Subtitel otomatis nyala sendiri").
+function disableAutoCaptions(player: any) {
+  try {
+    player.unloadModule('captions');
+    player.unloadModule('cc');
+  } catch (_) { /* noop — modul belum siap, aman diabaikan */ }
 }
 
 // ── Video Placeholder ─────────────────────────────────────────────────────────
@@ -186,12 +211,14 @@ function DarsVideoPlayer({
         rel: 0,
         modestbranding: 1,
         iv_load_policy: 3,
+        cc_load_policy: 0,
         fs: 1,
         playsinline: 1,
         ...(resume > 0 ? { start: resume } : {}),
       },
       events: {
-        onReady: () => {
+        onReady: (event: { target: any }) => {
+          disableAutoCaptions(event.target);
           if (resume > 0) {
             toast.info(getResumeLabel(resume), { duration: 4000 });
           }
@@ -245,7 +272,9 @@ function CertificateSection({
   const queryClient = useQueryClient();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [fullName, setFullName] = useState(user?.name ?? '');
-  const [score, setScore] = useState('');
+  // Kolom "Nilai Soal Latihan" dihapus dari form sesuai Revisi 1 Bulan.
+  // Kolom `score` di database sengaja dipertahankan supaya sertifikat lama
+  // yang terlanjur punya nilai tetap menampilkannya (lihat CertificateView).
   const [showCertModal, setShowCertModal] = useState(false);
   const [issuedCert, setIssuedCert] = useState<CertificateRequest | null>(null);
 
@@ -256,7 +285,7 @@ function CertificateSection({
   });
 
   const requestMutation = useMutation({
-    mutationFn: () => requestCertificate({ classId, fullName, email: user?.email ?? '', score }),
+    mutationFn: () => requestCertificate({ classId, fullName, email: user?.email ?? '' }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['my-certificate', user?.id, classId] });
       setIsFormOpen(false);
@@ -305,10 +334,6 @@ function CertificateSection({
             <div className="space-y-1">
               <Label>Nama Lengkap</Label>
               <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label>Nilai Soal Latihan (opsional)</Label>
-              <Input value={score} onChange={(e) => setScore(e.target.value)} placeholder="cth: 90" />
             </div>
             <div className="flex gap-2">
               <Button
@@ -639,12 +664,14 @@ function PlaylistMode({
         rel: 0,
         modestbranding: 1,
         iv_load_policy: 3,
+        cc_load_policy: 0,
         fs: 1,
         playsinline: 1,
         ...(resumeSeconds > 0 ? { start: resumeSeconds } : {}),
       },
       events: {
-        onReady: () => {
+        onReady: (event: { target: any }) => {
+          disableAutoCaptions(event.target);
           if (resumeSeconds > 0) {
             toast.info(getResumeLabel(resumeSeconds), { duration: 4000 });
           }
@@ -664,6 +691,11 @@ function PlaylistMode({
             // BUFFERING (termasuk saat user seek): update persentase saja,
             // TIDAK menulis ke DB agar tidak membebani dengan write berlebih
             refreshPercent();
+          } else if (event.data === 5) {
+            // CUED: video baru selesai dimuat via cueVideoById — modul
+            // subtitle video itu sendiri kadang baru siap di titik ini,
+            // sedikit belakangan dari panggilan cueVideoById-nya sendiri.
+            disableAutoCaptions(event.target);
           }
         },
       },
@@ -700,6 +732,9 @@ function PlaylistMode({
     setWatchedPercent(0); // reset indikator agar tidak nyangkut di video sebelumnya
     try {
       playerRef.current.cueVideoById(videoId, 0);
+      // Video baru bisa bawa track subtitle default sendiri — matikan lagi
+      // supaya tidak menyala ulang tiap kali pindah pertemuan.
+      disableAutoCaptions(playerRef.current);
     } catch (_) { /* noop */ }
     currentIndexRef.current = currentIndex;
   }, [currentIndex, videoIds, flushProgress]);
@@ -714,14 +749,26 @@ function PlaylistMode({
 
   // ── Status "Kelas Selesai" — sumber kebenaran dari data enrollment server ──
   // (bukan dari mutation.isSuccess semata, supaya tidak reset ke "belum selesai"
-  // saat halaman di-remount / keluar-masuk halaman)
-  const [optimisticDone, setOptimisticDone] = useState(false);
-  const isCompleted = initialIsCompleted || optimisticDone;
+  // saat halaman di-remount / keluar-masuk halaman). `optimisticOverride`
+  // dua arah (bukan flag satu arah seperti sebelumnya) supaya "Tandai Selesai"
+  // DAN "Batalkan" sama-sama bisa langsung terlihat sebelum refetch selesai.
+  const [optimisticOverride, setOptimisticOverride] = useState<boolean | null>(null);
+  const isCompleted = optimisticOverride ?? initialIsCompleted;
+  const [showUncompleteDialog, setShowUncompleteDialog] = useState(false);
+
+  // Dipakai untuk memperingatkan sebelum membatalkan tanda selesai, kalau
+  // sertifikat sudah pernah diterbitkan untuk kelas ini. Key query SAMA
+  // dengan yang dipakai CertificateSection, jadi tidak ada fetch dobel.
+  const { data: myCertForUncomplete } = useQuery({
+    queryKey: ['my-certificate', userId, classId],
+    queryFn: () => getMyCertificate(userId, classId),
+    enabled: !!userId && !!classId,
+  });
 
   const { mutate: completeEnrollmentMutate, isPending: isCompleting } = useMutation({
     mutationFn: () => completeEnrollmentFn({ userId, classId, enrollmentId }),
     onSuccess: () => {
-      setOptimisticDone(true);
+      setOptimisticOverride(true);
       queryClient.invalidateQueries({ queryKey: ['enrollments', userId] });
       queryClient.invalidateQueries({ queryKey: ['progress', userId, classId] });
       queryClient.invalidateQueries({ queryKey: ['my-classes'] });
@@ -732,10 +779,36 @@ function PlaylistMode({
     },
   });
 
+  const { mutate: uncompleteEnrollmentMutate, isPending: isUncompleting } = useMutation({
+    mutationFn: () => uncompleteEnrollmentFn({ userId, classId, enrollmentId }),
+    onSuccess: () => {
+      setOptimisticOverride(false);
+      setShowUncompleteDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['enrollments', userId] });
+      toast.success('Tanda kelas selesai dibatalkan.');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Gagal membatalkan, coba lagi.');
+    },
+  });
+
   const markVideoCompletedMutation = useMutation({
     mutationFn: markVideoCompleted,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['video-completions', userId, classId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan, coba lagi.');
+    },
+  });
+
+  const unmarkVideoCompletedMutation = useMutation({
+    mutationFn: unmarkVideoCompleted,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['video-completions', userId, classId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan, coba lagi.');
     },
   });
 
@@ -855,14 +928,29 @@ function PlaylistMode({
             const isActive = i === currentIndex;
             const isDone = completedIndexes.has(i);
             return (
-              <div key={i}>
+              <div
+                key={i}
+                className={`flex items-stretch gap-0.5 border-l-2 transition-colors duration-150 ${
+                  isActive ? 'bg-primary/10 border-primary' : 'border-transparent hover:bg-muted/40'
+                }`}
+              >
+                {/* Centang manual — independen dari navigasi, supaya pertemuan
+                    bisa ditandai selesai/belum tanpa harus menonton sampai
+                    habis (auto-mark saat video ENDED tetap jalan seperti biasa). */}
                 <button
-                  onClick={() => goToIndex(i)}
-                  className={`w-full flex items-start gap-3 px-5 py-2.5 text-left text-sm transition-colors duration-150 ${
-                    isActive
-                      ? 'bg-primary/10 border-l-2 border-primary'
-                      : 'hover:bg-muted/40 border-l-2 border-transparent'
-                  }`}
+                  type="button"
+                  onClick={() => {
+                    if (!userId || !classId) return;
+                    if (isDone) {
+                      unmarkVideoCompletedMutation.mutate({ userId, classId, videoIndex: i });
+                    } else {
+                      markVideoCompletedMutation.mutate({ userId, classId, videoIndex: i });
+                    }
+                  }}
+                  disabled={markVideoCompletedMutation.isPending || unmarkVideoCompletedMutation.isPending}
+                  className="shrink-0 pl-5 pr-1.5 py-2.5 flex items-start"
+                  title={isDone ? 'Tandai pertemuan ini belum selesai' : 'Tandai pertemuan ini selesai'}
+                  aria-label={isDone ? 'Tandai pertemuan ini belum selesai' : 'Tandai pertemuan ini selesai'}
                 >
                   <div className="shrink-0 mt-0.5">
                     {isActive ? (
@@ -870,11 +958,17 @@ function PlaylistMode({
                     ) : isDone ? (
                       <CheckCircle2 className="w-4 h-4 text-success" />
                     ) : (
-                      <Circle className="w-4 h-4 text-muted-foreground/40" />
+                      <Circle className="w-4 h-4 text-muted-foreground/40 hover:text-muted-foreground transition-colors" />
                     )}
                   </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToIndex(i)}
+                  className="flex-1 min-w-0 text-left text-sm py-2.5 pr-5"
+                >
                   <p
-                    className={`leading-snug flex-1 min-w-0 ${
+                    className={`leading-snug ${
                       isActive
                         ? 'font-semibold text-primary'
                         : isDone
@@ -1027,15 +1121,27 @@ function PlaylistMode({
                 </div>
 
                 {isCompleted ? (
-                  <div className="inline-flex items-center gap-2 rounded-lg bg-success-pale border border-success-pale px-4 py-3">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="inline-flex items-center gap-2 rounded-lg bg-success-pale border border-success-pale px-4 py-3">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+                      >
+                        <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
+                      </motion.div>
+                      <span className="font-semibold text-success">Kelas telah ditandai selesai</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowUncompleteDialog(true)}
+                      disabled={isUncompleting}
+                      className="text-muted-foreground hover:text-foreground gap-1.5 text-xs"
                     >
-                      <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
-                    </motion.div>
-                    <span className="font-semibold text-success">Kelas telah ditandai selesai</span>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Batalkan
+                    </Button>
                   </div>
                 ) : (
                   <motion.div
@@ -1121,6 +1227,34 @@ function PlaylistMode({
           </aside>
         </div>
       </div>
+
+      <AlertDialog open={showUncompleteDialog} onOpenChange={setShowUncompleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Batalkan tanda kelas selesai?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-left">
+                <p>
+                  Status kelas ini akan dikembalikan ke &ldquo;belum selesai&rdquo;. Centang
+                  pertemuan yang sudah kamu tonton tidak akan hilang.
+                </p>
+                {myCertForUncomplete && (
+                  <p className="text-brand-gold-hover font-medium">
+                    Kamu sudah punya sertifikat untuk kelas ini. Membatalkan status selesai
+                    tidak akan mencabut sertifikat yang sudah terbit.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isUncompleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => uncompleteEnrollmentMutate()} disabled={isUncompleting}>
+              {isUncompleting ? 'Membatalkan...' : 'Ya, Batalkan'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
@@ -1304,10 +1438,19 @@ function LearnContent() {
   // modules langsung dari classDetail — tidak perlu query terpisah
   const modules = classDetail?.modules ?? [];
 
+  // ── ID kelas yang SUDAH di-resolve oleh getClassById() (selalu UUID) ──
+  // `classId` dari useParams() bisa berisi UUID (rute /learn/:classId) ATAU
+  // slug (rute /belajar/:classId — termasuk /learn/:classId setelah URL
+  // ditulis ulang ke /belajar/... di atas). Semua query & mutation yang
+  // menembak kolom `class_id` (UUID di Postgres) WAJIB memakai classUuid
+  // ini, bukan classId mentah — kalau tidak, query/insert gagal senyap
+  // setiap kali halaman dibuka lewat URL slug atau di-refresh.
+  const classUuid = classDetail?.id;
+
   const { data: progressItems = [], isLoading: isLoadingProgress } = useQuery({
-    queryKey: ['progress', user?.id, classId],
-    queryFn: () => listProgress(user!.id, classId!),
-    enabled: !!user?.id && !!classId,
+    queryKey: ['progress', user?.id, classUuid],
+    queryFn: () => listProgress(user!.id, classUuid!),
+    enabled: !!user?.id && !!classUuid,
   });
 
   const { data: enrollments = [] } = useQuery({
@@ -1325,10 +1468,10 @@ function LearnContent() {
 
   // ── Rating pengajar — untuk sidebar kanan mode Modul/Bab ─────────────────
   const { data: moduleInstructorRating = { average: 0, count: 0, myRating: null } } = useQuery({
-    queryKey: ['instructor-rating', classDetail?.instructor?.id, classId, user?.id],
+    queryKey: ['instructor-rating', classDetail?.instructor?.id, classUuid, user?.id],
     queryFn: () =>
-      getInstructorRatingForClass(user!.id, classDetail!.instructor.id, classId!),
-    enabled: !!classDetail?.instructor?.id && !!classId && !!user?.id,
+      getInstructorRatingForClass(user!.id, classDetail!.instructor.id, classUuid!),
+    enabled: !!classDetail?.instructor?.id && !!classUuid && !!user?.id,
   });
 
   const submitModuleInstructorRating = useMutation({
@@ -1336,7 +1479,7 @@ function LearnContent() {
       submitInstructorRating(params),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['instructor-rating', classDetail?.instructor?.id, classId, user?.id],
+        queryKey: ['instructor-rating', classDetail?.instructor?.id, classUuid, user?.id],
       });
       toast.success('Rating pengajar tersimpan');
     },
@@ -1380,13 +1523,13 @@ function LearnContent() {
 
   const invalidateProgress = useCallback(() => {
     queryClient.invalidateQueries({
-      queryKey: ['progress', user?.id, classId],
+      queryKey: ['progress', user?.id, classUuid],
     });
-  }, [queryClient, user?.id, classId]);
+  }, [queryClient, user?.id, classUuid]);
 
   const enrollment = useMemo(
-    () => enrollments.find((e) => e.class.id === classId) ?? null,
-    [enrollments, classId],
+    () => enrollments.find((e) => e.class.id === classUuid) ?? null,
+    [enrollments, classUuid],
   );
 
   const isNormalClassCompleted =
@@ -1402,14 +1545,14 @@ function LearnContent() {
           invalidateProgress();
           // Jika ini dars terakhir yang diselesaikan, otomatis tandai kelas selesai
           if (totalDars > 0 && completedIds.size + 1 >= totalDars) {
-            completeEnrollmentFn({ userId: user.id, classId: classId!, enrollmentId: enrollment?.id });
+            completeEnrollmentFn({ userId: user.id, classId: classUuid!, enrollmentId: enrollment?.id });
             queryClient.invalidateQueries({ queryKey: ['enrollments', user.id] });
           }
           if (nextEntry) setTimeout(() => setActiveDarsId(nextEntry.dars.id), 400);
         },
       },
     );
-  }, [user?.id, resolvedActiveDarsId, updateProgressMutate, invalidateProgress, nextEntry, totalDars, completedIds.size, classId, enrollment, queryClient]);
+  }, [user?.id, resolvedActiveDarsId, updateProgressMutate, invalidateProgress, nextEntry, totalDars, completedIds.size, classUuid, enrollment, queryClient]);
 
   const handleUnmarkDone = useCallback(() => {
     if (!user?.id || !resolvedActiveDarsId) return;
@@ -1454,11 +1597,11 @@ function LearnContent() {
   const isPlaylistMode = !!(classDetail.youtubePlaylistId && classDetail.modules.length === 0);
 
   if (isPlaylistMode) {
-    const enrollment = enrollments.find((e) => e.class.id === classId) ?? null;
+    const enrollment = enrollments.find((e) => e.class.id === classUuid) ?? null;
     return (
       <PlaylistMode
-        key={classId}
-        classId={classId!}
+        key={classUuid}
+        classId={classUuid!}
         classTitle={classDetail.title}
         classDescription={classDetail.description}
         classCategory={classDetail.category}
@@ -1540,7 +1683,7 @@ function LearnContent() {
                 key={resolvedActiveDarsId}
                 youtubeVideoId={activeEntry.dars.youtubeVideoId}
                 darsIndex={activeIndex}
-                classId={classId!}
+                classId={classUuid!}
                 userId={user?.id ?? ''}
                 onVideoEnded={handleMarkDone}
               />
@@ -1738,7 +1881,7 @@ function LearnContent() {
             {/* Sertifikat — mobile only */}
             <div className="lg:hidden">
               <CertificateSection
-                classId={classId}
+                classId={classUuid!}
                 classTitle={classDetail.title}
                 isClassCompleted={isNormalClassCompleted}
               />
@@ -1772,7 +1915,7 @@ function LearnContent() {
                         : 'Belum ada rating'}
                     </span>
                   </div>
-                  {enrollments.some((e) => e.class.id === classId) && (
+                  {enrollments.some((e) => e.class.id === classUuid) && (
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">Rating kamu:</span>
                       <StarRating
@@ -1782,7 +1925,7 @@ function LearnContent() {
                         onChange={(r) =>
                           submitModuleInstructorRating.mutate({
                             instructorId: classDetail.instructor.id,
-                            classId: classId!,
+                            classId: classUuid!,
                             rating: r,
                           })
                         }
@@ -1824,7 +1967,7 @@ function LearnContent() {
                     : 'Belum ada rating'}
                 </span>
               </div>
-              {enrollments.some((e) => e.class.id === classId) && (
+              {enrollments.some((e) => e.class.id === classUuid) && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">Rating kamu:</span>
                   <StarRating
@@ -1834,7 +1977,7 @@ function LearnContent() {
                     onChange={(r) =>
                       submitModuleInstructorRating.mutate({
                         instructorId: classDetail.instructor.id,
-                        classId: classId!,
+                        classId: classUuid!,
                         rating: r,
                       })
                     }
@@ -1859,7 +2002,7 @@ function LearnContent() {
 
           {/* Card: Sertifikat */}
           <CertificateSection
-            classId={classId}
+            classId={classUuid!}
             classTitle={classDetail.title}
             isClassCompleted={isNormalClassCompleted}
           />

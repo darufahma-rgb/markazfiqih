@@ -144,9 +144,9 @@ function HeroSection({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            src="/logo.png"
+            src="/logo-white.png"
             alt="Markaz Fiqih"
-            className="h-8 sm:h-10 lg:h-12 w-auto mb-1 brightness-0 invert"
+            className="h-8 sm:h-10 lg:h-12 w-auto mb-1"
           />
 
           {/* 2. Ahlan wa Sahlan di & 3. Kelas Markaz Fiqih */}
@@ -860,10 +860,10 @@ function ContactSection({
         {/* Bagian bawah — identitas & copyright, dipisahkan garis tipis */}
         <div className="border-t border-white/10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <img
-            src="/logo.png"
+            src="/logo-white.png"
             alt="Markaz Fiqih"
             loading="lazy"
-            className="h-6 w-auto brightness-0 invert"
+            className="h-6 w-auto"
           />
           <p className="text-xs text-white/60">
             © {new Date().getFullYear()} Markaz Fiqih. Seluruh hak cipta dilindungi.

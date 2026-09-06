@@ -615,7 +615,7 @@ function CatalogContent() {
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState<'all' | 'pemula' | 'menengah' | 'lanjutan'>('all');
   const [category, setCategory] = useState<'all' | string>(initialCategory);
-  const [sort, setSort] = useState<'alphabetical' | 'newest' | 'price_asc' | 'price_desc' | 'popular' | 'manual'>('alphabetical');
+  const [sort, setSort] = useState<'alphabetical' | 'newest' | 'price_asc' | 'price_desc' | 'popular'>('alphabetical');
   const [selectedInstructorId, setSelectedInstructorId] = useState<string | null>(null);
 
   const { user } = useAuth();
@@ -698,9 +698,6 @@ function CatalogContent() {
     switch (sort) {
       case 'alphabetical':
         arr.sort((a, b) => a.title.localeCompare(b.title, 'id'));
-        break;
-      case 'manual':
-        arr.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
         break;
       case 'price_asc':
         arr.sort((a, b) => (a.discountPrice ?? a.basePrice) - (b.discountPrice ?? b.basePrice));
@@ -797,7 +794,6 @@ function CatalogContent() {
                   <SelectItem value="price_asc">Terhemat</SelectItem>
                   <SelectItem value="price_desc">Termahal</SelectItem>
                   <SelectItem value="popular">Terpopuler</SelectItem>
-                  <SelectItem value="manual">Urutan Admin</SelectItem>
                 </SelectContent>
               </Select>
             )}

@@ -32,7 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/data/mockClasses';
 import { useQuery } from '@tanstack/react-query';
-import { getClassById, listEnrollments, getClassEnrollmentStats } from '@/lib/db';
+import { getClassById, listEnrollments, getClassEnrollmentStats, getVideoCompletions, listProgress } from '@/lib/db';
 import { FacilitasCard } from '@/components/FacilitasCard';
 import { ClassReviewSection } from '@/components/ClassReviewSection';
 import { toast } from 'sonner';
@@ -148,6 +148,29 @@ export default function ClassDetailPage() {
     staleTime: 10 * 60 * 1000,
   });
   const enrollmentCount = enrollmentStatsQuery.data?.[cls?.id ?? '']?.enrolledCount ?? 0;
+
+  // ── Progress Belajar (kartu beli) ──────────────────────────────────────────
+  // Kelas berbasis playlist YouTube tidak punya modul/dars — dihitung dari
+  // video_completions vs meeting_count. Kelas modul/bab dihitung dari tabel
+  // progress vs jumlah dars asli. Hanya satu dari dua query ini yang aktif
+  // sekaligus, tergantung jenis kelasnya.
+  const isPlaylistClass = !!(cls && cls.youtubePlaylistId && cls.modules.length === 0);
+  const { data: completedMeetings = new Set<number>() } = useQuery({
+    queryKey: ['video-completions', user?.id, cls?.id],
+    queryFn: () => getVideoCompletions(user!.id, cls!.id),
+    enabled: !!user?.id && !!cls?.id && isPlaylistClass,
+  });
+  const { data: moduleProgressItems = [] } = useQuery({
+    queryKey: ['progress', user?.id, cls?.id],
+    queryFn: () => listProgress(user!.id, cls!.id),
+    enabled: !!user?.id && !!cls?.id && !isPlaylistClass,
+  });
+  const progressTotal = isPlaylistClass ? cls?.meetingCount ?? 0 : (cls?.modules.flatMap((m: any) => m.dars).length ?? 0);
+  const progressCompleted = isPlaylistClass
+    ? completedMeetings.size
+    : moduleProgressItems.filter((p) => p.isCompleted).length;
+  const progressPct = progressTotal > 0 ? Math.round((progressCompleted / progressTotal) * 100) : 0;
+  const showProgress = progressTotal > 0;
 
   useEffect(() => {
     if (cls) {
@@ -414,19 +437,26 @@ export default function ClassDetailPage() {
               <div className="sticky top-24 rounded-xl border bg-card shadow-md overflow-hidden">
                 {isEnrolled ? (
                   <>
-                    {/* Progress Belajar */}
-                    <div className="p-6 flex flex-col items-center gap-4 text-center">
-                      <p className="text-sm font-semibold text-foreground">
-                        Progress Belajar
-                      </p>
-                      <CircularProgress percent={75} />
-                      <p className="text-xs text-muted-foreground">
-                        3 dari {cls.moduleCount * PLACEHOLDER_DARS_PER_MODULE} pelajaran
-                        selesai
-                      </p>
-                    </div>
+                    {/* Progress Belajar — disembunyikan kalau tidak ada data
+                        akurat untuk dihitung (mis. kelas playlist yang admin
+                        belum isi meeting_count-nya), daripada menampilkan
+                        angka yang salah. */}
+                    {showProgress && (
+                      <>
+                        <div className="p-6 flex flex-col items-center gap-4 text-center">
+                          <p className="text-sm font-semibold text-foreground">
+                            Progress Belajar
+                          </p>
+                          <CircularProgress percent={progressPct} />
+                          <p className="text-xs text-muted-foreground">
+                            {progressCompleted} dari {progressTotal}{' '}
+                            {isPlaylistClass ? 'pertemuan' : 'pelajaran'} selesai
+                          </p>
+                        </div>
 
-                    <Separator />
+                        <Separator />
+                      </>
+                    )}
 
                     <div className="p-6">
                       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>

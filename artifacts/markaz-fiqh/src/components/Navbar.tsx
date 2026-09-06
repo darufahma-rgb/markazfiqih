@@ -62,9 +62,9 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
 
             <Link href="/" className="hidden md:flex items-center transition-opacity hover:opacity-90">
               <img
-                src="/logo.png"
+                src="/logo-white.png"
                 alt="Markaz Fiqih"
-                className="h-8 w-auto brightness-0 invert"
+                className="h-8 w-auto"
               />
             </Link>
           </div>
@@ -74,7 +74,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
             href="/"
             className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center transition-opacity hover:opacity-90"
           >
-            <img src="/logo.png" alt="Markaz Fiqih" className="h-7 w-auto shrink-0 brightness-0 invert" />
+            <img src="/logo-white.png" alt="Markaz Fiqih" className="h-7 w-auto shrink-0" />
           </Link>
 
           {/* Menu desktop — center absolut (tersembunyi di mobile) */}
