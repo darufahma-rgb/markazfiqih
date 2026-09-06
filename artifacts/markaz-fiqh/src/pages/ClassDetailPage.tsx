@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Users,
+  User,
 } from 'lucide-react';
 
 import { SEO } from '@/components/SEO';
@@ -318,8 +319,8 @@ export default function ClassDetailPage() {
               >
                 <Avatar className="w-14 h-14 shrink-0">
                   <AvatarImage src={cls.instructor.photoUrl} alt={cls.instructor.name} />
-                  <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-lg">
-                    {cls.instructor.name.charAt(0)}
+                  <AvatarFallback className="bg-muted text-muted-foreground">
+                    <User className="h-7 w-7" strokeWidth={1.5} />
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">

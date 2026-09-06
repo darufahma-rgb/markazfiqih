@@ -215,8 +215,9 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
             </p>
 
             {/* ── Overlay: Kelas ── */}
+            {/* font-bold: nama kelas ditebalkan sesuai permintaan revisi. */}
             <p
-              className="absolute font-serif text-center"
+              className="absolute font-serif font-bold text-center"
               style={{
                 left: `${overlayConfig.kelas.left}%`,
                 top: `${overlayConfig.kelas.top}%`,

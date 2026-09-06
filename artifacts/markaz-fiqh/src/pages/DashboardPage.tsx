@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import {
   PlayCircle,
+  PlaySquare,
   BookOpen,
   Clock,
   CheckCircle2,
@@ -20,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { listEnrollments, listActiveDashboardMessages, getActiveDashboardBoard, type EnrollmentItem } from '@/lib/db';
+import { listEnrollments, listActiveDashboardMessages, getActiveDashboardBoard, getEnrollmentProgress, type EnrollmentItem } from '@/lib/db';
 
 // ── Dashboard Board Card ──────────────────────────────────────────────────────
 function DashboardBoardCard() {
@@ -80,9 +81,9 @@ function formatDuration(min: number | null) {
 // ── KelasCard ─────────────────────────────────────────────────────────────────
 function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: number }) {
   const cls = enrollment.class;
-  const { totalDarsCount, completedDarsCount, totalDurationMinutes } = cls;
-  const pct = totalDarsCount > 0 ? Math.round((completedDarsCount / totalDarsCount) * 100) : 0;
-  const isComplete = totalDarsCount > 0 ? pct === 100 : enrollment.isCompleted;
+  const { totalDurationMinutes } = cls;
+  const { isPlaylistClass, unitLabel, total, completed, percent: pct, isComplete, hasStats } =
+    getEnrollmentProgress(enrollment);
   const learnUrl = `/learn/${cls.id}`;
 
   return (
@@ -132,21 +133,32 @@ function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: n
         </h3>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <BookOpen className="w-3.5 h-3.5" />
-            {cls.moduleCount} modul · {totalDarsCount} pelajaran
-          </span>
+          {isPlaylistClass ? (
+            hasStats && (
+              <span className="flex items-center gap-1">
+                <PlaySquare className="w-3.5 h-3.5" />
+                {total} pertemuan
+              </span>
+            )
+          ) : (
+            <span className="flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5" />
+              {cls.moduleCount} modul · {total} pelajaran
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
             {formatDuration(totalDurationMinutes)}
           </span>
         </div>
 
-        {/* Progress Tracker */}
+        {/* Progress Tracker — disembunyikan kalau tidak ada data akurat,
+            daripada menampilkan "0 dari 0" yang membingungkan. */}
+        {hasStats && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground text-xs">
-              {completedDarsCount} dari {totalDarsCount} pelajaran selesai
+              {completed} dari {total} {unitLabel} selesai
             </span>
             <span
               className={`font-bold text-sm ${
@@ -165,6 +177,7 @@ function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: n
             />
           </div>
         </div>
+        )}
 
         {/* CTA */}
         <div className="mt-auto pt-1">
@@ -212,24 +225,20 @@ function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: n
 
 // ── Summary Stats Bar ─────────────────────────────────────────────────────────
 function StatsSummary({ enrollments }: { enrollments: EnrollmentItem[] }) {
+  // Kelas tanpa rincian sama sekali tetap dihitung sebagai 1 unit supaya
+  // status selesainya masih ikut memengaruhi progress keseluruhan.
+  const unitsOf = (e: EnrollmentItem) => {
+    const p = getEnrollmentProgress(e);
+    if (!p.hasStats) return { total: 1, done: p.isComplete ? 1 : 0, complete: p.isComplete };
+    return { total: p.total, done: p.completed, complete: p.isComplete };
+  };
+
   const totalOwned = enrollments.length;
-  const totalCompleted = enrollments.filter(
-    (e) =>
-      (e.class.totalDarsCount > 0 && e.class.completedDarsCount === e.class.totalDarsCount) ||
-      (e.class.totalDarsCount === 0 && e.isCompleted),
-  ).length;
-  // Kelas video tunggal (totalDarsCount = 0) ikut disertakan: dianggap
-  const totalDarsAcross = enrollments.reduce(
-    (s, e) => s + (e.class.totalDarsCount > 0 ? e.class.totalDarsCount : 1),
-    0,
-  );
-  const totalDoneDars = enrollments.reduce(
-    (s, e) =>
-      s + (e.class.totalDarsCount > 0 ? e.class.completedDarsCount : e.isCompleted ? 1 : 0),
-    0,
-  );
+  const totalCompleted = enrollments.filter((e) => unitsOf(e).complete).length;
+  const totalUnitsAcross = enrollments.reduce((s, e) => s + unitsOf(e).total, 0);
+  const totalDoneUnits = enrollments.reduce((s, e) => s + unitsOf(e).done, 0);
   const overallPct =
-    totalDarsAcross > 0 ? Math.round((totalDoneDars / totalDarsAcross) * 100) : 0;
+    totalUnitsAcross > 0 ? Math.round((totalDoneUnits / totalUnitsAcross) * 100) : 0;
   const totalMinutes = enrollments.reduce((s, e) => s + (e.class.totalDurationMinutes ?? 0), 0);
   const totalJam = totalMinutes > 0
     ? totalMinutes >= 60
@@ -265,11 +274,7 @@ function ProgressSidebar({ enrollments }: { enrollments: EnrollmentItem[] }) {
         <p className="font-serif font-semibold mb-4">Progress Belajar</p>
         <div className="space-y-4">
           {enrollments.map((enrollment) => {
-            const { totalDarsCount, completedDarsCount } = enrollment.class;
-            const pct =
-              totalDarsCount > 0
-                ? Math.round((completedDarsCount / totalDarsCount) * 100)
-                : enrollment.isCompleted ? 100 : 0;
+            const { percent: pct } = getEnrollmentProgress(enrollment);
             return (
               <div key={enrollment.id}>
                 <div className="flex items-center justify-between gap-2">
@@ -327,11 +332,9 @@ function DashboardContent() {
   const showEmpty = search.get('demo') === 'empty';
   const classesToShow = showEmpty ? [] : enrollments;
 
-  const allInProgressEnrollments = classesToShow.filter((e) => {
-    if (e.class.totalDarsCount === 0) return !e.isCompleted;
-    const pct = Math.round((e.class.completedDarsCount / e.class.totalDarsCount) * 100);
-    return pct < 100;
-  });
+  const allInProgressEnrollments = classesToShow.filter(
+    (e) => !getEnrollmentProgress(e).isComplete,
+  );
   const inProgressEnrollments = allInProgressEnrollments.slice(0, 3);
   const hasMoreInProgress = allInProgressEnrollments.length > inProgressEnrollments.length;
 

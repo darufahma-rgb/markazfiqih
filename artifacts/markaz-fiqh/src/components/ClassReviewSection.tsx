@@ -12,6 +12,9 @@ import { StarRating } from '@/components/StarRating';
 import { useAuth } from '@/context/AuthContext';
 import { listClassReviews, submitClassReview, listEnrollments } from '@/lib/db';
 
+/** Jumlah review yang muat sebelum daftarnya mulai bisa di-scroll sendiri. */
+const REVIEWS_BEFORE_SCROLL = 5;
+
 // ── Review & Ulasan kelas (Prompt 102/116) ───────────────────────────────────
 // Dipakai di ClassDetailPage (full-width section, `variant="page"`, default)
 // dan sejak Prompt 131 juga di LearnPage mode Video Playlist, dirender di
@@ -216,7 +219,15 @@ export function ClassReviewSection({
           Belum ada ulasan. Jadilah yang pertama memberi review!
         </div>
       ) : (
-        <div className="space-y-5">
+        /* Daftar review dibatasi tinggi ~5 review lalu bisa di-scroll sendiri,
+           supaya halaman tidak makin memanjang seiring bertambahnya ulasan. */
+        <div
+          className={
+            reviews.length > REVIEWS_BEFORE_SCROLL
+              ? 'space-y-5 max-h-[420px] overflow-y-auto pr-2 -mr-2'
+              : 'space-y-5'
+          }
+        >
           {reviews.map((r) => (
             <div key={r.id} className="flex gap-4">
               <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">

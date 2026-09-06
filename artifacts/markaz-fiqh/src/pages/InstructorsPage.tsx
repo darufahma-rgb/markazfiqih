@@ -4,7 +4,7 @@ import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users } from 'lucide-react';
+import { Users, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { listActiveInstructors } from '@/lib/db';
 
@@ -67,8 +67,8 @@ function InstructorsContent() {
                 <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card p-6 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all duration-200 text-center group">
                   <Avatar className="h-24 w-24 border-2 border-border">
                     <AvatarImage src={instructor.photoUrl} alt={instructor.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                      {instructor.name.charAt(0)}
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      <User className="h-12 w-12" strokeWidth={1.5} />
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1 w-full">

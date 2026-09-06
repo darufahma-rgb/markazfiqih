@@ -61,6 +61,7 @@ import {
   RotateCcw,
   Loader2,
   Video,
+  User,
 } from 'lucide-react';
 
 import { AppShell } from '@/components/AppShell';
@@ -819,13 +820,14 @@ function PlaylistMode({
   });
   const relatedClasses = categoryClasses.filter((c) => c.id !== classId).slice(0, 3);
 
-  // Progress bar sidebar kiri — persentase pertemuan yang sudah selesai ditonton
-  const playlistProgressPct =
-    videoIds && videoIds.length > 0
-      ? Math.round((completedIndexes.size / videoIds.length) * 100)
-      : isCompleted
-      ? 100
-      : 0;
+  // Progress bar sidebar kiri — persentase pertemuan yang sudah selesai
+  // ditonton. Tombol "Tandai Kelas Selesai" selalu menang: sekali kelas
+  // ditandai selesai, progressnya 100% berapa pun pertemuan yang tercentang.
+  const playlistProgressPct = isCompleted
+    ? 100
+    : videoIds && videoIds.length > 0
+    ? Math.round((completedIndexes.size / videoIds.length) * 100)
+    : 0;
 
   // ── Kartu pengajar + fasilitas: dipakai ulang di desktop sidebar kanan & mobile ──
   const InstructorCard = () => (
@@ -834,8 +836,8 @@ function PlaylistMode({
       <div className="flex items-start gap-3">
         <Avatar className="w-12 h-12 shrink-0">
           <AvatarImage src={instructorPhotoUrl} alt={instructorName} />
-          <AvatarFallback className="bg-primary/10 text-primary font-bold">
-            {instructorName.charAt(0)}
+          <AvatarFallback className="bg-muted text-muted-foreground">
+            <User className="h-6 w-6" strokeWidth={1.5} />
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0">
@@ -905,7 +907,8 @@ function PlaylistMode({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {completedIndexes.size} dari {videoIds?.length ?? '…'} pertemuan selesai
+            {isCompleted && videoIds ? videoIds.length : completedIndexes.size} dari{' '}
+            {videoIds?.length ?? '…'} pertemuan selesai
           </p>
         </div>
       </div>
@@ -1894,8 +1897,8 @@ function LearnContent() {
                 <div className="flex items-start gap-3">
                   <Avatar className="w-12 h-12 shrink-0">
                     <AvatarImage src={classDetail.instructor.photoUrl} alt={classDetail.instructor.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {classDetail.instructor.name.charAt(0)}
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      <User className="h-6 w-6" strokeWidth={1.5} />
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
@@ -1946,8 +1949,8 @@ function LearnContent() {
             <div className="flex items-start gap-3">
               <Avatar className="w-12 h-12 shrink-0">
                 <AvatarImage src={classDetail.instructor.photoUrl} alt={classDetail.instructor.name} />
-                <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                  {classDetail.instructor.name.charAt(0)}
+                <AvatarFallback className="bg-muted text-muted-foreground">
+                  <User className="h-6 w-6" strokeWidth={1.5} />
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">

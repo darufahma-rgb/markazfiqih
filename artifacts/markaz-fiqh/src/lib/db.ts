@@ -31,6 +31,64 @@ export type EnrollmentItem = {
   };
 };
 
+export type EnrollmentProgress = {
+  /** Kelas berbasis playlist YouTube (tanpa modul/dars). */
+  isPlaylistClass: boolean;
+  /** "pertemuan" untuk kelas playlist, "pelajaran" untuk kelas bermodul. */
+  unitLabel: string;
+  /** Total unit. 0 berarti datanya belum tersedia. */
+  total: number;
+  /** Unit yang selesai — otomatis penuh kalau kelas ditandai selesai. */
+  completed: number;
+  percent: number;
+  isComplete: boolean;
+  /** false = tidak ada angka yang layak ditampilkan; sembunyikan saja. */
+  hasStats: boolean;
+};
+
+/**
+ * SATU sumber kebenaran untuk progress sebuah enrollment — dipakai kartu di
+ * Dashboard maupun Kelas Saya. Sebelumnya tiap halaman menghitung sendiri
+ * dengan rumus berbeda, sehingga kelas yang sama bisa tampil 100% di
+ * Dashboard tapi 0% di Kelas Saya.
+ *
+ * Aturannya: tanda "Kelas Selesai" yang ditekan pelajar (enrollments.
+ * is_completed) SELALU menang atas hitungan centang per pertemuan.
+ */
+export function getEnrollmentProgress(enrollment: EnrollmentItem): EnrollmentProgress {
+  const cls = enrollment.class;
+  const isPlaylistClass = !!cls.youtubePlaylistId && cls.moduleCount === 0;
+  const unitLabel = isPlaylistClass ? 'pertemuan' : 'pelajaran';
+  const total = isPlaylistClass ? cls.meetingCount ?? 0 : cls.totalDarsCount;
+  const rawCompleted = isPlaylistClass ? cls.completedMeetingsCount : cls.completedDarsCount;
+
+  if (total <= 0) {
+    // Tidak ada rincian sama sekali — satu-satunya sinyal yang bisa dipercaya
+    // adalah flag "selesai" milik enrollment.
+    return {
+      isPlaylistClass,
+      unitLabel,
+      total: 0,
+      completed: 0,
+      percent: enrollment.isCompleted ? 100 : 0,
+      isComplete: enrollment.isCompleted,
+      hasStats: false,
+    };
+  }
+
+  const isComplete = enrollment.isCompleted || rawCompleted >= total;
+  const completed = isComplete ? total : rawCompleted;
+  return {
+    isPlaylistClass,
+    unitLabel,
+    total,
+    completed,
+    percent: Math.round((completed / total) * 100),
+    isComplete,
+    hasStats: true,
+  };
+}
+
 export type BundleItem = {
   id: string;
   title: string;

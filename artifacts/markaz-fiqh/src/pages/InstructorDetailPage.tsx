@@ -4,7 +4,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { SEO } from '@/components/SEO';
 import { slugify, getInstructorWithClasses, getInstructorOverallRating } from '@/lib/db';
@@ -87,8 +87,8 @@ function InstructorDetailContent({ id }: { id: string }) {
             <div className="bg-card rounded-2xl border p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
               <Avatar className="h-32 w-32 shrink-0 border-2 border-border">
                 <AvatarImage src={instructor.photoUrl} alt={instructor.name} />
-                <AvatarFallback className="bg-primary/10 text-primary text-4xl font-bold">
-                  {instructor.name.charAt(0)}
+                <AvatarFallback className="bg-muted text-muted-foreground">
+                  <User className="h-16 w-16" strokeWidth={1.5} />
                 </AvatarFallback>
               </Avatar>
               <div className="space-y-2 text-center sm:text-left">

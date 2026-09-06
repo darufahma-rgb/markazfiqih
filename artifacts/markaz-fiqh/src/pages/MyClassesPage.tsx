@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { listEnrollments, type EnrollmentItem } from '@/lib/db';
+import { listEnrollments, getEnrollmentProgress, type EnrollmentItem } from '@/lib/db';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function formatDuration(min: number | null) {
@@ -39,17 +39,8 @@ function KelasCard({ enrollment, index }: { enrollment: EnrollmentItem; index: n
   const cls = enrollment.class;
   const { totalDurationMinutes } = cls;
 
-  // Kelas berbasis playlist YouTube tidak punya modul/dars — progress dan
-  // hitungan pelajarannya diukur dari video_completions vs meeting_count,
-  // bukan dari totalDarsCount (yang untuk kelas ini selalu 0).
-  const isPlaylistClass = !!cls.youtubePlaylistId && cls.moduleCount === 0;
-  const total = isPlaylistClass ? cls.meetingCount ?? 0 : cls.totalDarsCount;
-  const completed = isPlaylistClass ? cls.completedMeetingsCount : cls.completedDarsCount;
-  const hasStats = total > 0;
-  const unitLabel = isPlaylistClass ? 'pertemuan' : 'pelajaran';
-
-  const pct = hasStats ? Math.round((completed / total) * 100) : 0;
-  const isComplete = hasStats ? pct === 100 : enrollment.isCompleted;
+  const { isPlaylistClass, unitLabel, total, completed, percent: pct, isComplete, hasStats } =
+    getEnrollmentProgress(enrollment);
   const learnUrl = `/learn/${cls.id}`;
 
   return (
