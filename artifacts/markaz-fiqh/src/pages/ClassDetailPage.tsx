@@ -116,10 +116,6 @@ function CircularProgress({ percent }: { percent: number }) {
   );
 }
 
-// ── Placeholder daftar dars per modul (data dars asli belum tersedia dari API) ─
-// TODO: ganti dengan data dars asli dari backend setelah endpoint tersedia.
-const PLACEHOLDER_DARS_PER_MODULE = 3;
-
 // ── Detail Page ────────────────────────────────────────────────────────────
 export default function ClassDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -172,6 +168,10 @@ export default function ClassDetailPage() {
     : moduleProgressItems.filter((p) => p.isCompleted).length;
   const progressPct = progressTotal > 0 ? Math.round((progressCompleted / progressTotal) * 100) : 0;
   const showProgress = progressTotal > 0;
+  // Dipakai kurikulum untuk menandai pelajaran yang sudah diselesaikan.
+  const completedDarsIds = new Set(
+    moduleProgressItems.filter((p) => p.isCompleted).map((p) => p.darsId),
+  );
 
   useEffect(() => {
     if (cls) {
@@ -372,7 +372,7 @@ export default function ClassDetailPage() {
                 ) : (
                   /* Normal mode: module/dars accordion */
                   <Accordion type="multiple" className="space-y-2">
-                    {cls.modules.map((mod: any, modIdx: number) => (
+                    {cls.modules.map((mod: any) => (
                       <AccordionItem
                         key={mod.id}
                         value={mod.id}
@@ -397,32 +397,41 @@ export default function ClassDetailPage() {
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="space-y-1">
-                            {Array.from({ length: PLACEHOLDER_DARS_PER_MODULE }).map(
-                              (_, darsIdx) => {
-                                const globalDarsIndex =
-                                  modIdx * PLACEHOLDER_DARS_PER_MODULE + darsIdx;
-                                const isDoneDemo = globalDarsIndex < 3;
+                            {mod.dars.length === 0 ? (
+                              <p className="py-2 px-2 text-sm text-muted-foreground">
+                                Belum ada pelajaran di modul ini.
+                              </p>
+                            ) : (
+                              mod.dars.map((dars: any) => {
+                                const isDone = completedDarsIds.has(dars.id);
 
                                 return (
                                   <div
-                                    key={darsIdx}
-                                    className="flex items-center gap-2.5 py-2 px-2 rounded-md text-sm text-muted-foreground"
+                                    key={dars.id}
+                                    className="flex items-start gap-2.5 py-2 px-2 rounded-md text-sm text-muted-foreground"
                                   >
-                                    {isEnrolled ? (
-                                      isDoneDemo ? (
-                                        <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                                    <div className="shrink-0 mt-0.5">
+                                      {!isEnrolled ? (
+                                        <Lock className="w-4 h-4 text-muted-foreground" />
+                                      ) : isDone ? (
+                                        <CheckCircle2 className="w-4 h-4 text-success" />
                                       ) : (
-                                        <PlayCircle className="w-4 h-4 text-primary shrink-0" />
-                                      )
-                                    ) : (
-                                      <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
-                                    )}
-                                    <span>
-                                      Pelajaran {darsIdx + 1}: {mod.title}
-                                    </span>
+                                        <PlayCircle className="w-4 h-4 text-primary" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="leading-snug text-foreground/80">
+                                        {dars.title}
+                                      </p>
+                                      {dars.durationMinutes != null && (
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                          {formatDuration(dars.durationMinutes)}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
                                 );
-                              },
+                              })
                             )}
                           </div>
                         </AccordionContent>
