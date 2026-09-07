@@ -8,6 +8,11 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { mergeOverlayConfig } from '@/lib/certificateOverlayDefaults';
 
+// Template resmi yang ikut dibundel. Dipakai kalau kelas maupun pengaturan
+// global belum menetapkan template sendiri, sehingga sertifikat tidak pernah
+// jatuh ke desain lama.
+const BUNDLED_CERTIFICATE_TEMPLATE = '/sertifikat-template.png';
+
 function formatTanggal(iso: string): string {
   return new Date(iso).toLocaleDateString('id-ID', {
     day: 'numeric',
@@ -33,7 +38,7 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
   const activeTemplate =
     cert.certificateTemplateUrl?.trim() ||
     settings?.certificateDefaultTemplateUrl?.trim() ||
-    null;
+    BUNDLED_CERTIFICATE_TEMPLATE;
 
   const hasTemplate = !!activeTemplate;
 
