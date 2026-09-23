@@ -1731,18 +1731,6 @@ export default function AdminClassesPage() {
                   data-testid="input-class-testimoni"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Template Sertifikat (opsional)</Label>
-                <ImageUploadField
-                  value={form.certificateTemplateUrl}
-                  onChange={(url) => setForm((p) => ({ ...p, certificateTemplateUrl: url }))}
-                  previewClassName="w-28 h-20 rounded-md object-cover border"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Upload gambar template landscape (disarankan rasio A4 landscape, mis. 1123×794 px atau lebih besar).
-                  Kosongkan untuk memakai desain sertifikat bawaan.
-                </p>
-              </div>
 
               {/* ── Struktur Bab & Pelajaran — khusus kelas modul/dars */}
               {editingClass && isModuleClass && (

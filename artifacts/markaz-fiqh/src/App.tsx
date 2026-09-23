@@ -33,7 +33,6 @@ import AdminBundlesPage from '@/pages/admin/AdminBundlesPage';
 import AdminEbooksPage from '@/pages/admin/AdminEbooksPage';
 import AdminNotificationsPage from '@/pages/admin/AdminNotificationsPage';
 import AdminCertificatesPage from '@/pages/admin/AdminCertificatesPage';
-import AdminCertificateDesignPage from '@/pages/admin/AdminCertificateDesignPage';
 import AdminVouchersPage from '@/pages/admin/AdminVouchersPage';
 import CertificatePage from '@/pages/CertificatePage';
 import InstructorsPage from '@/pages/InstructorsPage';
@@ -111,7 +110,6 @@ const AdminCatalogLayout = withAdmin(AdminCatalogLayoutPage);
 const AdminBundles = withAdmin(AdminBundlesPage);
 const AdminEbooks = withAdmin(AdminEbooksPage);
 const AdminNotifications = withAdmin(AdminNotificationsPage);
-const AdminCertificateDesign = withAdmin(AdminCertificateDesignPage);
 const AdminVouchers = withAdmin(AdminVouchersPage);
 const AdminDashboard = withAdmin(AdminDashboardPage);
 
@@ -157,7 +155,6 @@ function Router() {
       <Route path="/admin/bundles" component={AdminBundles} />
       <Route path="/admin/ebooks" component={AdminEbooks} />
       <Route path="/admin/notifications" component={AdminNotifications} />
-      <Route path="/admin/certificate-design" component={AdminCertificateDesign} />
       <Route path="/admin/vouchers" component={AdminVouchers} />
       <Route path="/admin" component={AdminDashboard} />
 

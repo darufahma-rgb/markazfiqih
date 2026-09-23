@@ -50,11 +50,6 @@ export default function CertificatePage() {
       <div className="cert-root min-h-screen bg-white p-4">
         <CertificateView cert={cert} />
       </div>
-
-      {/* Catatan verifikasi publik */}
-      <div className="no-print fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground bg-background/80 backdrop-blur px-3 py-1.5 rounded-full border shadow-sm">
-        Verifikasi: markaz-fiqih.com/sertifikat/{cert.id}
-      </div>
     </>
   );
 }
