@@ -141,7 +141,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar isAdmin={isAdmin} />
 
       {/* Mobile top bar — visible only below lg breakpoint */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] border-b border-white/10 shadow-md">
+      <div className="lg:hidden fixed top-[var(--sat)] left-0 right-0 z-40 h-14 flex items-center justify-between px-4 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] border-b border-white/10 shadow-md">
         {/* 1. Kiri: Ikon Hamburger */}
         <motion.button
           onClick={() => setMobileOpen(true)}
@@ -198,7 +198,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="lg:hidden fixed top-0 left-0 z-50 w-[260px] h-dvh shadow-2xl"
+              className="lg:hidden fixed top-[var(--sat)] left-0 z-50 w-[260px] h-[calc(100dvh-var(--sat))] pb-[var(--sab)] shadow-2xl"
             >
               {/* Close button: ikon aksi — whileHover/whileTap */}
               <motion.button

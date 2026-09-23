@@ -27,7 +27,7 @@ export function FloatingCartBar() {
           // z-[45]: di bawah mobile drawer (z-50) sehingga drawer selalu muncul di atas
           // bottom-20 pada mobile: memberi ruang di atas sticky buy bar ClassDetailPage (z-40, bottom-0)
           // lg:bottom-4 lg:left-[calc(50%+120px)]: center visual terhadap area konten (sidebar 240px)
-          className="fixed bottom-20 lg:bottom-4 left-1/2 -translate-x-1/2 z-[45] w-[calc(100%-2rem)] max-w-md lg:left-[calc(50%+120px)] lg:translate-x-[-50%]"
+          className="fixed bottom-[calc(5rem+var(--sab))] lg:bottom-4 left-1/2 -translate-x-1/2 z-[45] w-[calc(100%-2rem)] max-w-md lg:left-[calc(50%+120px)] lg:translate-x-[-50%]"
         >
           <Link href="/keranjang">
             <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] text-white rounded-2xl shadow-xl px-5 py-3.5 cursor-pointer hover:shadow-2xl transition-shadow">

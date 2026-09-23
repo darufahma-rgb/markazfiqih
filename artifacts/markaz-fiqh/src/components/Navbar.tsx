@@ -42,8 +42,8 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
     <header
       className={
         isDark
-          ? 'sticky top-0 z-50 w-full bg-[#0a0908]'
-          : 'sticky top-0 z-50 w-full bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))]'
+          ? 'sticky top-[var(--sat)] z-50 w-full bg-[#0a0908]'
+          : 'sticky top-[var(--sat)] z-50 w-full bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))]'
       }
     >
       <div className="container mx-auto px-5 sm:px-8 lg:px-16 max-w-[1200px]">
