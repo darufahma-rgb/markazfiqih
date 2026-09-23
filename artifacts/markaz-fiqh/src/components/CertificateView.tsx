@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { mergeOverlayConfig } from '@/lib/certificateOverlayDefaults';
+import {
+  BUNDLED_CERTIFICATE_TEMPLATE,
+  CERTIFICATE_FONT_FAMILY,
+  OVERLAY_FONT_WEIGHT,
+  OVERLAY_MAX_WIDTH_PCT,
+  fitOverlayFontSize,
+  mergeOverlayConfig,
+} from '@/lib/certificateOverlayDefaults';
 import { BrandLogo } from '@/components/BrandLogo';
-
-// Template resmi yang ikut dibundel. Dipakai kalau kelas maupun pengaturan
-// global belum menetapkan template sendiri, sehingga sertifikat tidak pernah
-// jatuh ke desain lama.
-const BUNDLED_CERTIFICATE_TEMPLATE = '/sertifikat-template.png';
+import { CertificateOverlayFields } from '@/components/CertificateOverlayFields';
 
 function formatTanggal(iso: string): string {
   return new Date(iso).toLocaleDateString('id-ID', {
@@ -58,7 +61,15 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
       const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
 
       if (hasTemplate) {
-        let resolvedFontFamily = 'Georgia, serif';
+        let resolvedFontFamily = CERTIFICATE_FONT_FAMILY;
+        try {
+          await Promise.all([
+            document.fonts.load(`700 40px ${CERTIFICATE_FONT_FAMILY}`),
+            document.fonts.load(`400 40px ${CERTIFICATE_FONT_FAMILY}`),
+          ]);
+        } catch {
+          // fallback ke font sistem
+        }
         if (fontUrl) {
           try {
             const ff700 = new FontFace('sertifikat-custom-font', `url(${fontUrl})`, { weight: '700' });
@@ -90,14 +101,13 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
 
         ctx.drawImage(templateImg, 0, 0, W, H);
 
-        const drawText = (
-          text: string,
-          cfg: typeof overlayConfig.nama,
-          weight: '400' | '700',
-        ) => {
+        const drawText = (text: string, field: 'nama' | 'kelas' | 'tanggal') => {
+          const cfg = overlayConfig[field];
+          const weight = OVERLAY_FONT_WEIGHT[field];
           const x = (cfg.left / 100) * W;
           const y = (cfg.top / 100) * H;
-          const px = (cfg.fontSize / 100) * W;
+          const fontSize = fitOverlayFontSize(text, cfg.fontSize, OVERLAY_MAX_WIDTH_PCT[field], weight, resolvedFontFamily);
+          const px = (fontSize / 100) * W;
           ctx.save();
           ctx.font = `${weight} ${px}px ${resolvedFontFamily}`;
           ctx.fillStyle = cfg.color;
@@ -107,9 +117,9 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
           ctx.restore();
         };
 
-        drawText(cert.fullName, overlayConfig.nama, '700');
-        drawText(cert.classTitle, overlayConfig.kelas, '400');
-        drawText(formatTanggal(cert.issuedAt), overlayConfig.tanggal, '400');
+        drawText(cert.fullName, 'nama');
+        drawText(cert.classTitle, 'kelas');
+        drawText(formatTanggal(cert.issuedAt), 'tanggal');
 
         const imgData = canvas.toDataURL('image/png', 1.0);
         const canvasRatio = W / H;
@@ -202,58 +212,15 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
               className="w-full h-full object-cover block"
             />
 
-            {/* ── Overlay: Nama ── */}
-            <p
-              className="absolute font-serif font-bold text-center"
-              style={{
-                left: `${overlayConfig.nama.left}%`,
-                top: `${overlayConfig.nama.top}%`,
-                transform: 'translate(-50%, -50%)',
-                fontSize: `${overlayConfig.nama.fontSize}cqw`,
-                color: overlayConfig.nama.color,
-                maxWidth: '60%',
-                wordWrap: 'break-word',
-                lineHeight: 1.2,
-                ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
+            <CertificateOverlayFields
+              config={overlayConfig}
+              values={{
+                nama: cert.fullName,
+                kelas: cert.classTitle,
+                tanggal: formatTanggal(cert.issuedAt),
               }}
-            >
-              {cert.fullName}
-            </p>
-
-            {/* ── Overlay: Kelas ── */}
-            {/* font-bold: nama kelas ditebalkan sesuai permintaan revisi. */}
-            <p
-              className="absolute font-serif font-bold text-center"
-              style={{
-                left: `${overlayConfig.kelas.left}%`,
-                top: `${overlayConfig.kelas.top}%`,
-                transform: 'translate(-50%, -50%)',
-                fontSize: `${overlayConfig.kelas.fontSize}cqw`,
-                color: overlayConfig.kelas.color,
-                maxWidth: '55%',
-                wordWrap: 'break-word',
-                lineHeight: 1.3,
-                ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-              }}
-            >
-              {cert.classTitle}
-            </p>
-
-            {/* ── Overlay: Tanggal ── */}
-            <p
-              className="absolute text-center"
-              style={{
-                left: `${overlayConfig.tanggal.left}%`,
-                top: `${overlayConfig.tanggal.top}%`,
-                transform: 'translate(-50%, -50%)',
-                fontSize: `${overlayConfig.tanggal.fontSize}cqw`,
-                color: overlayConfig.tanggal.color,
-                whiteSpace: 'nowrap',
-                ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-              }}
-            >
-              {formatTanggal(cert.issuedAt)}
-            </p>
+              customFontFamily={customFontFamily}
+            />
           </div>
 
           <div className="flex justify-center mt-3 no-print">
