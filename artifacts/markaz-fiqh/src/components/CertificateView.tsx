@@ -225,7 +225,7 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
 
           <div className="flex justify-center mt-3 no-print">
             <span className="rounded-full bg-muted text-muted-foreground text-xs px-3 py-1.5 inline-block">
-              Verifikasi: markaz-fiqih.com/sertifikat/{cert.id}
+              Verifikasi: {window.location.host}/sertifikat/{cert.id}
             </span>
           </div>
         </div>
