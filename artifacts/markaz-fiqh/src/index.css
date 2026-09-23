@@ -77,13 +77,13 @@
 
 /* LIGHT MODE — Markaz Fiqih Design System */
 :root {
-  --button-outline: rgba(163, 31, 44, 0.15);
-  --badge-outline: rgba(163, 31, 44, 0.08);
+  --button-outline: rgba(173, 19, 19, 0.15);
+  --badge-outline: rgba(173, 19, 19, 0.08);
 
   --opaque-button-border-intensity: -8;
 
-  --elevate-1: rgba(163, 31, 44, 0.03);
-  --elevate-2: rgba(163, 31, 44, 0.08);
+  --elevate-1: rgba(173, 19, 19, 0.03);
+  --elevate-2: rgba(173, 19, 19, 0.08);
 
   --background: 26 47% 97%; /* Krem Dasar #FBF7F4 */
   --foreground: 7 14% 12%; /* Teks Utama #241C1B */
@@ -97,7 +97,7 @@
   --popover-foreground: 7 14% 12%;
   --popover-border: 17 23% 88%;
 
-  --primary: 354 68% 38%; /* Merah Utama #A31F2C */
+  --primary: 0 80% 38%; /* Merah Utama #AD1313 (branding) */
   --primary-foreground: 0 0% 100%;
 
   --secondary: 17 20% 94%; /* Netral terang untuk secondary surface */
@@ -113,14 +113,14 @@
   --destructive-foreground: 0 0% 100%;
 
   --input: 17 23% 88%;
-  --ring: 354 68% 38%;
+  --ring: 0 80% 38%;
 
   /* Warna tambahan Markaz Fiqih (dipakai langsung via arbitrary value / util classes) */
-  --brand-red-hover: 356 69% 31%; /* #85181F */
-  --brand-red-active: 356 69% 24%; /* #671319 */
-  --brand-red-deep: 356 68% 17%; /* #4A0E12 */
-  --brand-red-border: 354 51% 76%; /* #E1A3A9 */
-  --brand-red-tint: 355 62% 96%; /* #FBEEEF */
+  --brand-red-hover: 0 80% 30%; /* #8A0F0F */
+  --brand-red-active: 359 91% 21%; /* Merah Gelap #670506 (branding) */
+  --brand-red-deep: 359 92% 15%; /* #4A0304 */
+  --brand-red-border: 0 51% 76%; /* #E1A3A3 */
+  --brand-red-tint: 0 62% 96%; /* #FBEEEE */
 
   --brand-gold-hover: 38 66% 35%; /* #966B1F */
   --brand-gold-pale: 41 66% 90%; /* #F6EBD3 */
@@ -136,10 +136,10 @@
   --app-font-mono: 'Menlo', monospace;
   --radius: 0.75rem; /* 12px — Button default; Card 18px & Input 8px set per-component */
 
-  --shadow-sm: 0px 1px 4px rgba(163, 31, 44, 0.04);
-  --shadow: 0px 4px 20px rgba(163, 31, 44, 0.08);
-  --shadow-md: 0px 6px 24px rgba(163, 31, 44, 0.08);
-  --shadow-lg: 0px 12px 32px rgba(163, 31, 44, 0.10);
+  --shadow-sm: 0px 1px 4px rgba(173, 19, 19, 0.04);
+  --shadow: 0px 4px 20px rgba(173, 19, 19, 0.08);
+  --shadow-md: 0px 6px 24px rgba(173, 19, 19, 0.08);
+  --shadow-lg: 0px 12px 32px rgba(173, 19, 19, 0.10);
 
   --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
@@ -151,10 +151,10 @@
   --sidebar-background: 0 0% 100%; /* Putih, sama dengan --card */
   --sidebar-foreground: 11 10% 33%; /* Teks Sekunder, sama dengan --muted-foreground */
   --sidebar-border: 17 23% 88%; /* sama dengan --border */
-  --sidebar-accent: 355 62% 96%; /* tint merah brand lembut, sama dengan --brand-red-tint */
-  --sidebar-accent-foreground: 354 68% 38%; /* Merah Utama, sama dengan --primary */
-  --sidebar-primary: 354 68% 38%; /* sama dengan --primary */
-  --sidebar-ring: 354 68% 38%; /* sama dengan --ring */
+  --sidebar-accent: 0 62% 96%; /* tint merah brand lembut, sama dengan --brand-red-tint */
+  --sidebar-accent-foreground: 0 80% 38%; /* Merah Utama, sama dengan --primary */
+  --sidebar-primary: 0 80% 38%; /* sama dengan --primary */
+  --sidebar-ring: 0 80% 38%; /* sama dengan --ring */
 }
 
 .dark {
@@ -168,7 +168,7 @@
   --popover: 356 25% 9%;
   --popover-foreground: 26 30% 95%;
   --popover-border: 356 15% 18%;
-  --primary: 354 68% 48%;
+  --primary: 0 80% 48%;
   --primary-foreground: 0 0% 100%;
   --secondary: 356 15% 16%;
   --secondary-foreground: 26 30% 95%;
@@ -179,15 +179,15 @@
   --destructive: 4 74% 55%;
   --destructive-foreground: 0 0% 100%;
   --input: 356 15% 18%;
-  --ring: 354 68% 48%;
+  --ring: 0 80% 48%;
 
   --sidebar-background: 356 25% 9%; /* sama dengan --card di dark mode */
   --sidebar-foreground: 26 30% 95%; /* sama dengan --foreground di dark mode */
   --sidebar-border: 356 15% 18%; /* sama dengan --border di dark mode */
   --sidebar-accent: 356 15% 16%; /* sama dengan --secondary di dark mode */
-  --sidebar-accent-foreground: 354 68% 48%; /* sama dengan --primary di dark mode */
-  --sidebar-primary: 354 68% 48%; /* sama dengan --primary di dark mode */
-  --sidebar-ring: 354 68% 48%; /* sama dengan --ring di dark mode */
+  --sidebar-accent-foreground: 0 80% 48%; /* sama dengan --primary di dark mode */
+  --sidebar-primary: 0 80% 48%; /* sama dengan --primary di dark mode */
+  --sidebar-ring: 0 80% 48%; /* sama dengan --ring di dark mode */
 }
 
 @utility transition-friendly {

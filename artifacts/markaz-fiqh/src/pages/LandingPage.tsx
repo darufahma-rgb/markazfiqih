@@ -23,6 +23,7 @@ import {
   ClassCardSkeleton,
   type ClassSummary,
 } from '@/pages/CatalogPage';
+import { BrandLogo, BRAND_LOGO_SRC } from '@/components/BrandLogo';
 
 // ── Helper: konversi nomor lokal ke format wa.me ─────────────────────────────
 function toWaUrl(phone: string): string {
@@ -144,7 +145,7 @@ function HeroSection({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4 }}
-            src="/logo-white.png"
+            src={BRAND_LOGO_SRC.white}
             alt="Markaz Fiqih"
             className="h-8 sm:h-10 lg:h-12 w-auto mb-1"
           />
@@ -804,8 +805,7 @@ function ContactSection({
       />
 
       {/* Logo watermark — pojok kanan-bawah, utuh dalam batas section */}
-      <img
-        src="/logo.png"
+      <BrandLogo
         alt=""
         aria-hidden="true"
         className="pointer-events-none absolute bottom-4 right-4 w-48 h-48 sm:w-56 sm:h-56 object-contain opacity-[0.07] select-none"
@@ -859,8 +859,8 @@ function ContactSection({
 
         {/* Bagian bawah — identitas & copyright, dipisahkan garis tipis */}
         <div className="border-t border-white/10 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <img
-            src="/logo-white.png"
+          <BrandLogo
+            variant="white"
             alt="Markaz Fiqih"
             loading="lazy"
             className="h-6 w-auto"

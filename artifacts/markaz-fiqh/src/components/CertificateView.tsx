@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { mergeOverlayConfig } from '@/lib/certificateOverlayDefaults';
+import { BrandLogo } from '@/components/BrandLogo';
 
 // Template resmi yang ikut dibundel. Dipakai kalau kelas maupun pengaturan
 // global belum menetapkan template sendiri, sehingga sertifikat tidak pernah
@@ -288,8 +289,8 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
 
             {/* Header: Logo & Title */}
             <div className="relative z-10 flex flex-col items-center gap-[1.5cqw]">
-              <img
-                src="/logo-icon.png"
+              <BrandLogo
+                variant="icon"
                 alt="Markaz Fiqih"
                 className="h-[6cqw] w-auto object-contain"
               />

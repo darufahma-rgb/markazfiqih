@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { BookOpen, ShoppingCart, Menu, X } from 'lucide-react';
+import { BrandLogo } from '@/components/BrandLogo';
 
 interface NavbarProps {
   variant?: 'default' | 'dark';
@@ -61,8 +62,8 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
             </motion.button>
 
             <Link href="/" className="hidden md:flex items-center transition-opacity hover:opacity-90">
-              <img
-                src="/logo-white.png"
+              <BrandLogo
+                variant="white"
                 alt="Markaz Fiqih"
                 className="h-8 w-auto"
               />
@@ -74,7 +75,7 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
             href="/"
             className="md:hidden absolute left-1/2 -translate-x-1/2 flex items-center transition-opacity hover:opacity-90"
           >
-            <img src="/logo-white.png" alt="Markaz Fiqih" className="h-7 w-auto shrink-0" />
+            <BrandLogo variant="white" alt="Markaz Fiqih" className="h-7 w-auto shrink-0" />
           </Link>
 
           {/* Menu desktop — center absolut (tersembunyi di mobile) */}

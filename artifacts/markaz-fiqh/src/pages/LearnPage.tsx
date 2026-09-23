@@ -22,6 +22,10 @@ declare global {
         cueVideoById: (videoId: string, startSeconds?: number) => void;
         seekTo: (seconds: number, allowSeekAhead: boolean) => void;
         playVideo: () => void;
+        pauseVideo: () => void;
+        getPlayerState: () => number;
+        getPlaybackRate: () => number;
+        setPlaybackRate: (rate: number) => void;
         unloadModule: (moduleName: string) => void;
         destroy: () => void;
       };
@@ -46,6 +50,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { CertificateView } from '@/components/CertificateView';
+import { ProtectedVideoFrame, YOUTUBE_PROTECTED_PLAYER_VARS } from '@/components/ProtectedVideoFrame';
 import {
   ArrowLeft,
   Award,
@@ -208,13 +213,7 @@ function DarsVideoPlayer({
     const player = new window.YT.Player('dars-video-player', {
       videoId: youtubeVideoId,
       playerVars: {
-        autoplay: 0,
-        rel: 0,
-        modestbranding: 1,
-        iv_load_policy: 3,
-        cc_load_policy: 0,
-        fs: 1,
-        playsinline: 1,
+        ...YOUTUBE_PROTECTED_PLAYER_VARS,
         ...(resume > 0 ? { start: resume } : {}),
       },
       events: {
@@ -252,7 +251,9 @@ function DarsVideoPlayer({
   return (
     <div className="w-full bg-black">
       <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-        <div id="dars-video-player" className="absolute inset-0 w-full h-full" />
+        <div className="absolute inset-0">
+          <ProtectedVideoFrame containerId="dars-video-player" playerRef={playerRef} />
+        </div>
       </div>
     </div>
   );
@@ -661,13 +662,7 @@ function PlaylistMode({
     const player = new window.YT.Player('yt-video-container', {
       videoId,
       playerVars: {
-        autoplay: 0,
-        rel: 0,
-        modestbranding: 1,
-        iv_load_policy: 3,
-        cc_load_policy: 0,
-        fs: 1,
-        playsinline: 1,
+        ...YOUTUBE_PROTECTED_PLAYER_VARS,
         ...(resumeSeconds > 0 ? { start: resumeSeconds } : {}),
       },
       events: {
@@ -1048,7 +1043,7 @@ function PlaylistMode({
                     </p>
                   </div>
                 ) : (
-                  <div id="yt-video-container" className="w-full h-full" />
+                  <ProtectedVideoFrame containerId="yt-video-container" playerRef={playerRef} />
                 )}
               </div>
               {/* Player tersembunyi, dipakai sekali membaca daftar video lewat getPlaylist() */}

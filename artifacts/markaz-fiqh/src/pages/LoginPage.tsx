@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
 import { motion } from 'framer-motion';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
@@ -42,7 +43,7 @@ export default function LoginPage() {
         />
 
         <div className="relative z-10 flex items-center gap-3">
-          <img src="/logo-white.png" alt="Markaz Fiqih" className="h-8 w-auto" />
+          <BrandLogo variant="white" alt="Markaz Fiqih" className="h-8 w-auto" />
         </div>
 
         <div className="relative z-10 max-w-lg space-y-6">
@@ -71,8 +72,7 @@ export default function LoginPage() {
         >
           <div className="text-center lg:text-left space-y-2">
             <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
-              <img
-                src="/logo.png"
+              <BrandLogo
                 alt="Markaz Fiqih"
                 className="h-6.5 w-auto"
               />
