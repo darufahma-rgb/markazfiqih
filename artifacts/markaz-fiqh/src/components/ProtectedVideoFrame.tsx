@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { Gauge, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw } from 'lucide-react';
+import { Captions, CaptionsOff, Gauge, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Protected Video Frame ─────────────────────────────────────────────────────
@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // Iframe YouTube dibuat `pointer-events: none` dan ditutup layer transparan,
 // jadi judul video, tombol Share / Watch Later, logo "YouTube", video terkait,
 // dan menu klik-kanan ("Salin URL video") tidak bisa diklik penonton.
-// Semua kontrol (play, ±10 detik, kecepatan, fullscreen) ada di layer ini.
+// Semua kontrol (play, ±10 detik, kecepatan, subtitle, fullscreen) ada di layer ini.
 //
 // Pemilih kualitas sengaja TIDAK ada: sejak 2019 YouTube mengabaikan
 // setPlaybackQuality(), kualitas diatur otomatis sesuai ukuran player &
@@ -31,11 +31,29 @@ export const YOUTUBE_PROTECTED_PLAYER_VARS = {
 const SEEK_STEP_SECONDS = 10;
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const CONTROLS_HIDE_DELAY_MS = 2500;
+const CC_STORAGE_KEY = 'mf-video-cc';
 
 // YT.PlayerState
 const STATE_ENDED = 0;
 const STATE_PLAYING = 1;
 const STATE_BUFFERING = 3;
+
+// Subtitle (CC) YouTube: modul `captions` baru dimuat saat video mulai diputar,
+// jadi status CC diterapkan ulang setiap kali video mulai jalan. Default MATI.
+function applyCaptions(player: any, on: boolean) {
+  try {
+    if (on) {
+      player.loadModule?.('captions');
+    } else {
+      player.unloadModule?.('captions');
+      player.unloadModule?.('cc');
+    }
+  } catch (_) { /* modul belum siap — dicoba lagi saat video mulai jalan */ }
+}
+
+function readCcPreference() {
+  try { return localStorage.getItem(CC_STORAGE_KEY) === 'on'; } catch { return false; }
+}
 
 function formatTime(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -73,6 +91,9 @@ export function ProtectedVideoFrame({
   const [seekFlash, setSeekFlash] = useState<{ dir: -1 | 1; key: number } | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const desiredSpeedRef = useRef(1);
+  const [ccOn, setCcOn] = useState(readCcPreference);
+  const ccOnRef = useRef(ccOn);
+  const lastStateRef = useRef(-1);
 
   const isPlaying = playerState === STATE_PLAYING || playerState === STATE_BUFFERING;
   const isFullscreen = isNativeFullscreen || isPseudoFullscreen;
@@ -84,6 +105,10 @@ export function ProtectedVideoFrame({
       if (!p?.getPlayerState) return;
       try {
         const state = p.getPlayerState();
+        if (state === STATE_PLAYING && lastStateRef.current !== STATE_PLAYING) {
+          applyCaptions(p, ccOnRef.current);
+        }
+        lastStateRef.current = state;
         setPlayerState(state);
         setCurrentTime(p.getCurrentTime?.() ?? 0);
         setDuration(p.getDuration?.() ?? 0);
@@ -153,6 +178,14 @@ export function ProtectedVideoFrame({
     try { playerRef.current?.setPlaybackRate(rate); } catch (_) { /* noop */ }
   }, [playerRef]);
 
+  const toggleCaptions = useCallback(() => {
+    const next = !ccOnRef.current;
+    ccOnRef.current = next;
+    setCcOn(next);
+    try { localStorage.setItem(CC_STORAGE_KEY, next ? 'on' : 'off'); } catch { /* abaikan */ }
+    if (playerRef.current) applyCaptions(playerRef.current, next);
+  }, [playerRef]);
+
   const toggleFullscreen = useCallback(() => {
     const el = wrapperRef.current as FullscreenElement | null;
     const doc = document as FullscreenDocument;
@@ -210,6 +243,7 @@ export function ProtectedVideoFrame({
     else if (key === 'arrowleft' || key === 'j') { e.preventDefault(); seekBy(-SEEK_STEP_SECONDS); }
     else if (key === 'arrowright' || key === 'l') { e.preventDefault(); seekBy(SEEK_STEP_SECONDS); }
     else if (key === 'f') { e.preventDefault(); toggleFullscreen(); }
+    else if (key === 'c') { e.preventDefault(); toggleCaptions(); revealControls(); }
   };
 
   // Klik area video: mouse → play/pause; sentuhan → tampil/sembunyikan kontrol
@@ -386,6 +420,9 @@ export function ProtectedVideoFrame({
                 </div>
               )}
             </div>
+            <BarButton label={ccOn ? 'Matikan subtitle (CC)' : 'Nyalakan subtitle (CC)'} onClick={toggleCaptions}>
+              {ccOn ? <Captions className="w-5 h-5 text-accent" /> : <CaptionsOff className="w-5 h-5" />}
+            </BarButton>
             <BarButton label={isFullscreen ? 'Keluar layar penuh' : 'Layar penuh'} onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </BarButton>
