@@ -1,7 +1,7 @@
 {
   "id": "/",
   "name": "Kelas Markaz Fiqih",
-  "short_name": "Markaz Fiqih",
+  "short_name": "Kelas Markaz Fiqih",
   "description": "Tempat belajar fiqih madzhab Syafi'i yang sistematis dan terstruktur.",
   "lang": "id",
   "start_url": "/dashboard?source=pwa",

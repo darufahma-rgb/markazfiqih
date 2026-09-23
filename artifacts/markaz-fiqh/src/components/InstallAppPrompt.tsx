@@ -105,7 +105,7 @@ export function InstallAppPrompt() {
               <img src="/icon-192.png" alt="" className="h-16 w-16 rounded-2xl shadow-md shrink-0" />
               <div className="min-w-0">
                 <h2 id="install-app-title" className="font-serif text-lg font-bold leading-tight text-foreground">
-                  Pasang Aplikasi Markaz Fiqih
+                  Pasang Aplikasi Kelas Markaz Fiqih
                 </h2>
                 <p className="text-sm text-muted-foreground mt-0.5">Gratis · tanpa Play Store / App Store</p>
               </div>
