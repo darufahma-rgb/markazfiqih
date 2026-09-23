@@ -352,34 +352,6 @@ export default function AdminSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Template Sertifikat Default</CardTitle>
-            <CardDescription>
-              Template gambar yang dipakai untuk semua kelas yang belum punya template sertifikat sendiri.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Gambar Template</Label>
-              <ImageUploadField
-                value={form.certificateDefaultTemplateUrl}
-                onChange={(url) => updateField('certificateDefaultTemplateUrl', url ?? '')}
-                previewClassName="w-full max-w-xs rounded border object-contain bg-muted"
-              />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Template ini otomatis dipakai untuk SEMUA kelas yang belum punya template sertifikat sendiri (diatur di halaman Kelas).
-                Kosongkan untuk memakai desain sertifikat bawaan (HTML) yang lama.
-                Pastikan area untuk Nama, Kelas, dan Tanggal dikosongkan saat membuat gambar template,
-                karena teks tersebut akan ditempel otomatis oleh sistem di posisi berikut (dalam persen dari lebar/tinggi gambar):
-                Nama di tengah horizontal 50.8%, tengah vertikal 40.1%;
-                Kelas di tengah horizontal 50%, tengah vertikal 56%;
-                Tanggal di tengah horizontal 14%, tengah vertikal 93.7%.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle className="text-base">Urutan Kategori Katalog</CardTitle>
             <CardDescription>
               Atur urutan section kategori yang muncul di halaman Katalog saat filter "Semua" aktif.

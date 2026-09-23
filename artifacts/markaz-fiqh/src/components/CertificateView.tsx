@@ -1,21 +1,24 @@
-import { useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getSettings, type CertificateRequest } from '@/lib/db';
+import { useState } from 'react';
+import { type CertificateRequest } from '@/lib/db';
 import { Loader2, Printer, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import {
   BUNDLED_CERTIFICATE_TEMPLATE,
   CERTIFICATE_FONT_FAMILY,
+  DEFAULT_OVERLAY_CONFIG,
   OVERLAY_FONT_WEIGHT,
   OVERLAY_MAX_WIDTH_PCT,
   fitOverlayFontSize,
-  mergeOverlayConfig,
 } from '@/lib/certificateOverlayDefaults';
-import { BrandLogo } from '@/components/BrandLogo';
 import { CertificateOverlayFields } from '@/components/CertificateOverlayFields';
+
+// Semua sertifikat memakai template resmi v2 yang dibundel beserta posisi,
+// warna, dan font teks bawaannya. Template/posisi/font yang pernah diatur
+// lewat Panel Admin (tersimpan di database) sengaja diabaikan supaya tidak
+// ada lagi sertifikat yang tampil dengan desain lama.
+const overlayConfig = DEFAULT_OVERLAY_CONFIG;
 
 function formatTanggal(iso: string): string {
   return new Date(iso).toLocaleDateString('id-ID', {
@@ -31,27 +34,15 @@ interface CertificateViewProps {
 }
 
 export function CertificateView({ cert, showPrintButton = true }: CertificateViewProps) {
-  const certificateRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: getSettings,
-  });
-
-  const activeTemplate =
-    cert.certificateTemplateUrl?.trim() ||
-    settings?.certificateDefaultTemplateUrl?.trim() ||
-    BUNDLED_CERTIFICATE_TEMPLATE;
-
-  const hasTemplate = !!activeTemplate;
-
-  const overlayConfig = mergeOverlayConfig(settings?.certificateOverlayConfig ?? null);
-  const fontUrl = overlayConfig.fontUrl ?? null;
-  const customFontFamily = fontUrl ? "'sertifikat-custom-font', serif" : undefined;
+  const values = {
+    nama: cert.fullName,
+    kelas: cert.classTitle,
+    tanggal: formatTanggal(cert.issuedAt),
+  };
 
   const handleDownloadPdf = async () => {
-    if (!certificateRef.current || !cert) return;
     setIsDownloading(true);
     try {
       const safeName = (cert.fullName || 'peserta').replace(/[^a-zA-Z0-9]+/g, '-');
@@ -60,87 +51,53 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
       const pageWidth = pdf.internal.pageSize.getWidth(); // 297mm
       const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
 
-      if (hasTemplate) {
-        let resolvedFontFamily = CERTIFICATE_FONT_FAMILY;
-        try {
-          await Promise.all([
-            document.fonts.load(`700 40px ${CERTIFICATE_FONT_FAMILY}`),
-            document.fonts.load(`400 40px ${CERTIFICATE_FONT_FAMILY}`),
-          ]);
-        } catch {
-          // fallback ke font sistem
-        }
-        if (fontUrl) {
-          try {
-            const ff700 = new FontFace('sertifikat-custom-font', `url(${fontUrl})`, { weight: '700' });
-            const ff400 = new FontFace('sertifikat-custom-font', `url(${fontUrl})`, { weight: '400' });
-            await Promise.all([ff700.load(), ff400.load()]);
-            document.fonts.add(ff700);
-            document.fonts.add(ff400);
-            resolvedFontFamily = "'sertifikat-custom-font', serif";
-          } catch {
-            // fallback
-          }
-        }
-
-        const templateImg = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = activeTemplate!;
-        });
-
-        const SCALE = 3;
-        const W = templateImg.naturalWidth * SCALE;
-        const H = templateImg.naturalHeight * SCALE;
-        const canvas = document.createElement('canvas');
-        canvas.width = W;
-        canvas.height = H;
-        const ctx = canvas.getContext('2d')!;
-
-        ctx.drawImage(templateImg, 0, 0, W, H);
-
-        const drawText = (text: string, field: 'nama' | 'kelas' | 'tanggal') => {
-          const cfg = overlayConfig[field];
-          const weight = OVERLAY_FONT_WEIGHT[field];
-          const x = (cfg.left / 100) * W;
-          const y = (cfg.top / 100) * H;
-          const fontSize = fitOverlayFontSize(text, cfg.fontSize, OVERLAY_MAX_WIDTH_PCT[field], weight, resolvedFontFamily);
-          const px = (fontSize / 100) * W;
-          ctx.save();
-          ctx.font = `${weight} ${px}px ${resolvedFontFamily}`;
-          ctx.fillStyle = cfg.color;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(text, x, y);
-          ctx.restore();
-        };
-
-        drawText(cert.fullName, 'nama');
-        drawText(cert.classTitle, 'kelas');
-        drawText(formatTanggal(cert.issuedAt), 'tanggal');
-
-        const imgData = canvas.toDataURL('image/png', 1.0);
-        const canvasRatio = W / H;
-        const pageRatio = pageWidth / pageHeight;
-        let rW = pageWidth, rH = pageHeight, oX = 0, oY = 0;
-        if (canvasRatio > pageRatio) { rH = pageWidth / canvasRatio; oY = (pageHeight - rH) / 2; }
-        else { rW = pageHeight * canvasRatio; oX = (pageWidth - rW) / 2; }
-        pdf.addImage(imgData, 'PNG', oX, oY, rW, rH);
-
-      } else {
-        await document.fonts.ready;
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        const canvas = await html2canvas(certificateRef.current, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-        });
-        const imgData = canvas.toDataURL('image/png', 1.0);
-        pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
+      try {
+        await Promise.all([
+          document.fonts.load(`700 40px ${CERTIFICATE_FONT_FAMILY}`),
+          document.fonts.load(`400 40px ${CERTIFICATE_FONT_FAMILY}`),
+        ]);
+      } catch {
+        // fallback ke font sistem
       }
+
+      const templateImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = BUNDLED_CERTIFICATE_TEMPLATE;
+      });
+
+      const SCALE = 3;
+      const W = templateImg.naturalWidth * SCALE;
+      const H = templateImg.naturalHeight * SCALE;
+      const canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d')!;
+
+      ctx.drawImage(templateImg, 0, 0, W, H);
+
+      (['nama', 'kelas', 'tanggal'] as const).forEach((field) => {
+        const cfg = overlayConfig[field];
+        const weight = OVERLAY_FONT_WEIGHT[field];
+        const text = values[field];
+        const fontSize = fitOverlayFontSize(text, cfg.fontSize, OVERLAY_MAX_WIDTH_PCT[field], weight, CERTIFICATE_FONT_FAMILY);
+        ctx.save();
+        ctx.font = `${weight} ${(fontSize / 100) * W}px ${CERTIFICATE_FONT_FAMILY}`;
+        ctx.fillStyle = cfg.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, (cfg.left / 100) * W, (cfg.top / 100) * H);
+        ctx.restore();
+      });
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const canvasRatio = W / H;
+      const pageRatio = pageWidth / pageHeight;
+      let rW = pageWidth, rH = pageHeight, oX = 0, oY = 0;
+      if (canvasRatio > pageRatio) { rH = pageWidth / canvasRatio; oY = (pageHeight - rH) / 2; }
+      else { rW = pageHeight * canvasRatio; oX = (pageWidth - rW) / 2; }
+      pdf.addImage(imgData, 'PNG', oX, oY, rW, rH);
 
       pdf.save(`Sertifikat-${safeClass}-${safeName}.pdf`);
     } catch {
@@ -193,155 +150,26 @@ export function CertificateView({ cert, showPrintButton = true }: CertificateVie
         </Button>
       </div>
 
-      {hasTemplate ? (
-        /* ── Mode Template ───────────────────────────────────────────── */
-        <div className="w-full max-w-5xl flex flex-col items-center">
-          <div
-            ref={certificateRef}
-            className="relative w-full aspect-[297/210] overflow-hidden bg-white shadow-xl rounded-lg"
-            style={{ containerType: 'inline-size' }}
-          >
-            {fontUrl && (
-              <style>{`@font-face { font-family: 'sertifikat-custom-font'; src: url('${fontUrl}'); font-display: swap; }`}</style>
-            )}
+      <div className="w-full max-w-5xl flex flex-col items-center">
+        <div
+          className="relative w-full aspect-[297/210] overflow-hidden bg-white shadow-xl rounded-lg"
+          style={{ containerType: 'inline-size' }}
+        >
+          <img
+            src={BUNDLED_CERTIFICATE_TEMPLATE}
+            alt="Template Sertifikat"
+            className="w-full h-full object-cover block"
+          />
 
-            <img
-              src={activeTemplate!}
-              alt="Template Sertifikat"
-              crossOrigin="anonymous"
-              className="w-full h-full object-cover block"
-            />
-
-            <CertificateOverlayFields
-              config={overlayConfig}
-              values={{
-                nama: cert.fullName,
-                kelas: cert.classTitle,
-                tanggal: formatTanggal(cert.issuedAt),
-              }}
-              customFontFamily={customFontFamily}
-            />
-          </div>
-
-          <div className="flex justify-center mt-3 no-print">
-            <span className="rounded-full bg-muted text-muted-foreground text-xs px-3 py-1.5 inline-block">
-              Verifikasi: {window.location.host}/sertifikat/{cert.id}
-            </span>
-          </div>
+          <CertificateOverlayFields config={overlayConfig} values={values} />
         </div>
-      ) : (
-        /* ── Mode Bawaan Standard A4 Landscape (297 x 210 mm) ─────────────────── */
-        <div className="w-full max-w-5xl flex flex-col items-center">
-          <div
-            ref={certificateRef}
-            className="relative w-full aspect-[297/210] bg-white rounded-xl overflow-hidden flex flex-col justify-between p-[4%] text-center box-border shadow-2xl border-2 border-[#c8a96e]"
-            style={{
-              containerType: 'inline-size',
-              backgroundImage: 'url(/hero-pattern.png)',
-              backgroundRepeat: 'repeat',
-              backgroundSize: '240px',
-            }}
-          >
-            {/* Overlay tipis putih */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: 'rgba(255,255,255,0.92)' }}
-            />
 
-            {/* Border ornamental dalam */}
-            <div
-              className="absolute inset-[12px] rounded-lg pointer-events-none"
-              style={{ border: '1.5px solid #e8d5a3' }}
-            />
-
-            {/* Header: Logo & Title */}
-            <div className="relative z-10 flex flex-col items-center gap-[1.5cqw]">
-              <BrandLogo
-                variant="icon"
-                alt="Markaz Fiqih"
-                className="h-[6cqw] w-auto object-contain"
-              />
-
-              <div className="space-y-[0.3cqw]">
-                <p className="text-[1.2cqw] font-bold uppercase tracking-[0.3em] text-[#c8a96e]">
-                  Markaz Fiqih
-                </p>
-                <h1
-                  className="font-serif font-bold text-foreground"
-                  style={{ fontSize: '3.6cqw', letterSpacing: '0.12em', lineHeight: 1 }}
-                >
-                  SERTIFIKAT
-                </h1>
-                <p className="text-[1.3cqw] text-muted-foreground tracking-widest uppercase font-medium">
-                  Keikutsertaan Kelas
-                </p>
-              </div>
-            </div>
-
-            {/* Content: Recipient & Course */}
-            <div className="relative z-10 flex flex-col items-center my-[1cqw] gap-[1cqw]">
-              <div className="flex items-center gap-3 w-full max-w-xs opacity-70">
-                <div className="flex-1 h-px bg-[#c8a96e]" />
-                <span className="text-[#c8a96e] text-[1.5cqw]">✦</span>
-                <div className="flex-1 h-px bg-[#c8a96e]" />
-              </div>
-
-              <div className="space-y-[0.3cqw]">
-                <p className="text-[1.3cqw] text-muted-foreground">Diberikan kepada</p>
-                <p
-                  className="font-serif font-bold text-foreground"
-                  style={{ fontSize: '3.2cqw', lineHeight: 1.15 }}
-                >
-                  {cert.fullName}
-                </p>
-              </div>
-
-              <div className="space-y-[0.2cqw] max-w-xl">
-                <p className="text-[1.2cqw] text-muted-foreground">atas keikutsertaan dalam kelas</p>
-                <p className="font-serif text-[2.2cqw] font-semibold text-foreground leading-snug">
-                  {cert.classTitle}
-                </p>
-              </div>
-
-              {cert.score && (
-                <div className="px-4 py-1 rounded-full border border-[#c8a96e]/40 bg-[#fdf8ee]">
-                  <p className="text-[1.2cqw] text-foreground">
-                    Nilai Ujian / Latihan:{' '}
-                    <span className="font-bold text-[#b8860b]">{cert.score}</span>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Footer: Cert No & Date */}
-            <div className="relative z-10 w-full flex items-end justify-between text-[1.2cqw] text-muted-foreground pt-[1cqw] border-t border-[#c8a96e]/30">
-              <div className="text-left space-y-0.5">
-                <p className="uppercase tracking-wide font-semibold text-[0.9cqw]">
-                  Nomor Sertifikat
-                </p>
-                <p className="font-mono text-[1.3cqw] font-semibold text-foreground">
-                  {cert.certificateNumber}
-                </p>
-              </div>
-
-              <div className="text-center space-y-1">
-                <p className="text-[1.1cqw] text-muted-foreground italic">
-                  Diterbitkan melalui platform Kelas Markaz Fiqih
-                </p>
-              </div>
-
-              <div className="text-right space-y-0.5">
-                <p className="uppercase tracking-wide font-semibold text-[0.9cqw]">
-                  Tanggal Terbit
-                </p>
-                <p className="text-[1.3cqw] font-semibold text-foreground">
-                  {formatTanggal(cert.issuedAt)}
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="flex justify-center mt-3 no-print">
+          <span className="rounded-full bg-muted text-muted-foreground text-xs px-3 py-1.5 inline-block">
+            Verifikasi: {window.location.host}/sertifikat/{cert.id}
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

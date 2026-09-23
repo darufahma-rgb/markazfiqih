@@ -5,15 +5,8 @@ export type OverlayFieldConfig = {
   color: string;
 };
 
-export type CertificateOverlayConfig = {
-  nama?: Partial<OverlayFieldConfig>;
-  kelas?: Partial<OverlayFieldConfig>;
-  tanggal?: Partial<OverlayFieldConfig>;
-  fontUrl?: string | null;
-};
-
 // Template resmi yang ikut dibundel (public/sertifikat-template.png, 1123×794).
-// Dipakai kalau kelas maupun pengaturan global belum menetapkan template sendiri.
+// Selalu dipakai untuk semua sertifikat (template dari Panel Admin diabaikan).
 export const BUNDLED_CERTIFICATE_TEMPLATE = '/sertifikat-template.png';
 
 // Font yang sama dengan tulisan di template (geometric sans).
@@ -60,21 +53,4 @@ export function fitOverlayFontSize(
   const widthAt100 = measureCtx.measureText(text).width;
   if (widthAt100 <= 0) return baseSize;
   return Math.min(baseSize, (maxWidthPct * 100) / widthAt100);
-}
-
-export type MergedOverlayConfig = {
-  nama: OverlayFieldConfig;
-  kelas: OverlayFieldConfig;
-  tanggal: OverlayFieldConfig;
-  fontUrl: string | null;
-};
-
-/** Merge saved config (per-field) di atas default. fontUrl default null. */
-export function mergeOverlayConfig(saved: CertificateOverlayConfig | null | undefined): MergedOverlayConfig {
-  return {
-    nama:    { ...DEFAULT_OVERLAY_CONFIG.nama,    ...(saved?.nama    ?? {}) },
-    kelas:   { ...DEFAULT_OVERLAY_CONFIG.kelas,   ...(saved?.kelas   ?? {}) },
-    tanggal: { ...DEFAULT_OVERLAY_CONFIG.tanggal, ...(saved?.tanggal ?? {}) },
-    fontUrl: saved?.fontUrl ?? null,
-  };
 }
