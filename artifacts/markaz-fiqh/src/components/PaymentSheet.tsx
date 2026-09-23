@@ -128,7 +128,7 @@ export function PaymentSheet({
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: 'easeOut' }}
-        className="w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl border shadow-xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full sm:max-w-md bg-card rounded-t-2xl sm:rounded-2xl border shadow-xl overflow-hidden flex flex-col max-h-[92vh] pb-[var(--sab)] sm:pb-0"
         role="dialog"
         aria-modal="true"
         aria-label="Pembayaran"

@@ -5,6 +5,7 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import { InstallAppPrompt } from '@/components/InstallAppPrompt';
 import { RequireAdminRoute } from '@/components/RequireAdminRoute';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ScrollToTop } from '@/components/ScrollToTop';
@@ -172,6 +173,7 @@ function App() {
           <AuthProvider>
             <CartProvider>
               <Router />
+              <InstallAppPrompt />
             </CartProvider>
           </AuthProvider>
         </WouterRouter>

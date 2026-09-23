@@ -625,7 +625,7 @@ export default function ClassDetailPage() {
 
       {/* Mobile sticky buy bar — hanya muncul di bawah lg, disembunyikan jika sudah enrolled */}
       {!isEnrolled && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm px-4 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm px-4 pt-3 pb-[calc(0.75rem+var(--sab))] flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
           <div className="min-w-0">
             {hasDiscount ? (
               <>

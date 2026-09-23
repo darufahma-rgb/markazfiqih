@@ -104,7 +104,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="sticky top-[var(--sat)] z-40 flex h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <SidebarTrigger data-testid="button-sidebar-toggle" />
           <Separator orientation="vertical" className="h-5" />
           <h1 className="font-serif text-lg font-semibold text-foreground flex-1">

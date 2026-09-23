@@ -77,6 +77,10 @@
 
 /* LIGHT MODE — Markaz Fiqih Design System */
 :root {
+  /* Area aman notch / garis home HP (0 di desktop & browser biasa) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+
   --button-outline: rgba(173, 19, 19, 0.15);
   --badge-outline: rgba(173, 19, 19, 0.08);
 
@@ -246,5 +250,43 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-semibold;
+  }
+}
+
+/* ── Tampilan HP & PWA ──────────────────────────────────────────────────────
+   viewport-fit=cover + status bar "black-translucent" membuat halaman mulai
+   dari paling atas layar (di bawah jam/notch). Konten digeser sebesar area
+   aman, dan area status bar diberi warna merah brand supaya teks jam putih
+   tetap terbaca di semua halaman. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  padding-top: var(--sat);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--sat);
+  background: hsl(var(--primary));
+  z-index: 70;
+  pointer-events: none;
+}
+
+@media (display-mode: standalone) {
+  /* Rasa aplikasi: tidak ada seleksi teks tak sengaja saat tap tombol/menu */
+  button,
+  a,
+  nav {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 }

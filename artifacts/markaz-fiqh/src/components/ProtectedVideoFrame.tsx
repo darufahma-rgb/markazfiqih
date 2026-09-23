@@ -316,6 +316,8 @@ export function ProtectedVideoFrame({
           // di-tap di layar kecil; hanya baris kontrolnya yang interaktif.
           'pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-3 sm:px-4 pt-6 sm:pt-8 pb-1.5 sm:pb-3 transition-opacity duration-300',
           showChrome ? 'opacity-100 [&>*]:pointer-events-auto' : 'opacity-0',
+          // iPhone: jangan ketutup garis home saat layar penuh
+          isPseudoFullscreen && 'pb-[max(0.375rem,var(--sab))]',
         )}
       >
         <div className="relative h-4 flex items-center">
