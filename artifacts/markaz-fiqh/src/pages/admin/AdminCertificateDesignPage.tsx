@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSettings, updateSettings } from '@/lib/db';
 import { toast } from 'sonner';
 import {
+  BUNDLED_CERTIFICATE_TEMPLATE,
   DEFAULT_OVERLAY_CONFIG,
   mergeOverlayConfig,
   type OverlayFieldConfig,
@@ -16,6 +17,7 @@ import {
   type MergedOverlayConfig,
 } from '@/lib/certificateOverlayDefaults';
 import { FontUploadField } from '@/components/FontUploadField';
+import { CertificateOverlayFields } from '@/components/CertificateOverlayFields';
 
 // State shape = MergedOverlayConfig (termasuk fontUrl)
 type PageConfig = MergedOverlayConfig;
@@ -150,7 +152,8 @@ export default function AdminCertificateDesignPage() {
     setConfig(defaultConfig());
   }
 
-  const templateUrl = settings?.certificateDefaultTemplateUrl?.trim() || null;
+  // Sama dengan urutan di CertificateView: template default → template bawaan
+  const templateUrl = settings?.certificateDefaultTemplateUrl?.trim() || BUNDLED_CERTIFICATE_TEMPLATE;
   const todayStr = formatTanggalPreview();
   const customFontFamily = config.fontUrl ? "'sertifikat-custom-font', serif" : undefined;
 
@@ -174,7 +177,7 @@ export default function AdminCertificateDesignPage() {
               <div className="flex items-center justify-center h-40">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               </div>
-            ) : templateUrl ? (
+            ) : (
               <div
                 className="relative w-full"
                 style={{ containerType: 'inline-size' }}
@@ -191,64 +194,11 @@ export default function AdminCertificateDesignPage() {
                   className="w-full h-auto block"
                 />
 
-                {/* Overlay: Nama */}
-                <p
-                  className="absolute font-serif font-bold text-center pointer-events-none"
-                  style={{
-                    left: `${config.nama.left}%`,
-                    top: `${config.nama.top}%`,
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: `${config.nama.fontSize}cqw`,
-                    color: config.nama.color,
-                    maxWidth: '60%',
-                    wordWrap: 'break-word',
-                    lineHeight: 1.2,
-                    ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-                  }}
-                >
-                  Nama Peserta Contoh
-                </p>
-
-                {/* Overlay: Kelas */}
-                <p
-                  className="absolute font-serif text-center pointer-events-none"
-                  style={{
-                    left: `${config.kelas.left}%`,
-                    top: `${config.kelas.top}%`,
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: `${config.kelas.fontSize}cqw`,
-                    color: config.kelas.color,
-                    maxWidth: '55%',
-                    wordWrap: 'break-word',
-                    lineHeight: 1.3,
-                    ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-                  }}
-                >
-                  Nama Kelas Contoh
-                </p>
-
-                {/* Overlay: Tanggal */}
-                <p
-                  className="absolute text-center pointer-events-none"
-                  style={{
-                    left: `${config.tanggal.left}%`,
-                    top: `${config.tanggal.top}%`,
-                    transform: 'translate(-50%, -50%)',
-                    fontSize: `${config.tanggal.fontSize}cqw`,
-                    color: config.tanggal.color,
-                    whiteSpace: 'nowrap',
-                    ...(customFontFamily ? { fontFamily: customFontFamily } : {}),
-                  }}
-                >
-                  {todayStr}
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-40 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Upload template default dulu di halaman{' '}
-                  <a href="/admin/settings" className="underline">Pengaturan</a>.
-                </p>
+                <CertificateOverlayFields
+                  config={config}
+                  values={{ nama: 'Nama Peserta Contoh', kelas: 'Nama Kelas Contoh', tanggal: todayStr }}
+                  customFontFamily={customFontFamily}
+                />
               </div>
             )}
           </CardContent>
