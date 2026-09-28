@@ -178,12 +178,17 @@ function CheckoutContent() {
 
   // ── Syarat & Ketentuan ────────────────────────────────────────────────────
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // Banyak pembeli membuka link Mayar di email setelah bayar dan mendarat di
+  // halaman kosong — tegaskan bahwa kelas langsung ada di menu "Kelas Saya".
+  const hasClassItem = items.some((item) => item.type !== 'ebook');
+  const [understoodAccess, setUnderstoodAccess] = useState(false);
 
   // ── Bayar ─────────────────────────────────────────────────────────────────
   const [session, setSession] = useState<CheckoutSession | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
-  const canPay = !!savedPhone && items.length > 0 && !isStarting && agreedToTerms;
+  const canPay =
+    !!savedPhone && items.length > 0 && !isStarting && agreedToTerms && (!hasClassItem || understoodAccess);
 
   const handlePay = async () => {
     if (!canPay) return;
@@ -485,6 +490,25 @@ function CheckoutContent() {
                   </label>
                 </div>
 
+                {hasClassItem && (
+                  <div className="flex items-start gap-2.5">
+                    <Checkbox
+                      id="understand-access"
+                      checked={understoodAccess}
+                      onCheckedChange={(v) => setUnderstoodAccess(Boolean(v))}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <label
+                      htmlFor="understand-access"
+                      className="text-xs text-foreground/80 leading-relaxed cursor-pointer"
+                    >
+                      Saya memahami bahwa setelah melakukan pembayaran kelas, saya dapat langsung mengakses kelas
+                      melalui menu <span className="font-semibold text-foreground">“Kelas Saya”</span> di website
+                      tanpa perlu membuka email.
+                    </label>
+                  </div>
+                )}
+
                 <Separator />
 
                 <div className="space-y-1.5 text-sm">
@@ -530,9 +554,11 @@ function CheckoutContent() {
                   </p>
                 )}
 
-                {!agreedToTerms && (
+                {(!agreedToTerms || (hasClassItem && !understoodAccess)) && (
                   <p className="text-xs text-destructive text-center">
-                    Centang persetujuan Syarat &amp; Ketentuan dulu untuk melanjutkan.
+                    {hasClassItem
+                      ? 'Centang kedua pernyataan di atas dulu untuk melanjutkan.'
+                      : 'Centang persetujuan Syarat & Ketentuan dulu untuk melanjutkan.'}
                   </p>
                 )}
 
