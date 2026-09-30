@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
-import { Captions, CaptionsOff, Gauge, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw } from 'lucide-react';
+import { Captions, CaptionsOff, Check, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, Play, RotateCcw, RotateCw, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Protected Video Frame ─────────────────────────────────────────────────────
@@ -7,11 +7,14 @@ import { cn } from '@/lib/utils';
 // Iframe YouTube dibuat `pointer-events: none` dan ditutup layer transparan,
 // jadi judul video, tombol Share / Watch Later, logo "YouTube", video terkait,
 // dan menu klik-kanan ("Salin URL video") tidak bisa diklik penonton.
-// Semua kontrol (play, ±10 detik, kecepatan, subtitle, fullscreen) ada di layer ini.
+// Semua kontrol (play, ±10 detik, kecepatan, kualitas, subtitle, fullscreen) ada di layer ini.
 //
-// Pemilih kualitas sengaja TIDAK ada: sejak 2019 YouTube mengabaikan
-// setPlaybackQuality(), kualitas diatur otomatis sesuai ukuran player &
-// koneksi (fullscreen biasanya naik ke HD).
+// Kualitas: sejak 2019 YouTube mengabaikan setPlaybackQuality(); kualitas
+// dipilih YouTube sendiri dari ukuran player (× devicePixelRatio) & koneksi.
+// Mode "Hemat kuota" / "Kualitas tinggi" memanfaatkan itu: iframe dibuat
+// kecil/besar di belakang layar lalu di-scale dengan CSS supaya tetap mengisi
+// player. Hasilnya usaha terbaik — YouTube tetap bisa menurunkan kualitas
+// kalau sinyal lemah.
 //
 // Player tetap dibuat oleh parent (new YT.Player(containerId, ...)) — parent
 // wajib memakai YOUTUBE_PROTECTED_PLAYER_VARS supaya kontrol bawaan YouTube mati.
@@ -32,6 +35,58 @@ const SEEK_STEP_SECONDS = 10;
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const CONTROLS_HIDE_DELAY_MS = 2500;
 const CC_STORAGE_KEY = 'mf-video-cc';
+const QUALITY_STORAGE_KEY = 'mf-video-quality';
+
+type QualityMode = 'auto' | 'saver' | 'high';
+
+const QUALITY_OPTIONS: { value: QualityMode; label: string; hint: string }[] = [
+  { value: 'auto', label: 'Otomatis', hint: 'Disarankan' },
+  { value: 'saver', label: 'Hemat kuota', hint: '± 360p' },
+  { value: 'high', label: 'Kualitas tinggi', hint: 'Hingga HD' },
+];
+
+// Lebar player (piksel fisik) yang "dilihat" YouTube untuk tiap mode
+const QUALITY_TARGET_WIDTH: Record<Exclude<QualityMode, 'auto'>, number> = {
+  saver: 640,
+  high: 1920,
+};
+
+// Nilai getPlaybackQuality() → label yang mudah dibaca
+const YT_QUALITY_LABEL: Record<string, string> = {
+  tiny: '144p',
+  small: '240p',
+  medium: '360p',
+  large: '480p',
+  hd720: '720p',
+  hd1080: '1080p',
+  hd1440: '1440p',
+  hd2160: '4K',
+  highres: '4K+',
+};
+
+function readQualityPreference(): QualityMode {
+  try {
+    const v = localStorage.getItem(QUALITY_STORAGE_KEY);
+    return v === 'saver' || v === 'high' ? v : 'auto';
+  } catch { return 'auto'; }
+}
+
+/** Ukuran & transform iframe untuk mode kualitas; null = isi penuh (Otomatis). */
+function iframeLayout(mode: QualityMode, boxW: number, boxH: number) {
+  if (mode === 'auto' || boxW <= 0 || boxH <= 0) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const w = QUALITY_TARGET_WIDTH[mode] / dpr;
+  const h = (w * 9) / 16;
+  const scale = Math.min(boxW / w, boxH / h);
+  const left = (boxW - w * scale) / 2;
+  const top = (boxH - h * scale) / 2;
+  return {
+    width: `${w}px`,
+    height: `${h}px`,
+    transform: `translate(${left}px, ${top}px) scale(${scale})`,
+    transformOrigin: '0 0',
+  } as const;
+}
 
 // YT.PlayerState
 const STATE_ENDED = 0;
@@ -83,7 +138,11 @@ export function ProtectedVideoFrame({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
-  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
+  const [settingsPanel, setSettingsPanel] = useState<'closed' | 'root' | 'speed' | 'quality'>('closed');
+  const settingsOpen = settingsPanel !== 'closed';
+  const [quality, setQuality] = useState<QualityMode>(readQualityPreference);
+  const [ytQuality, setYtQuality] = useState<string | null>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
   const [isNativeFullscreen, setIsNativeFullscreen] = useState(false);
   // Fallback untuk browser tanpa Fullscreen API di elemen biasa (iPhone Safari)
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
@@ -112,6 +171,7 @@ export function ProtectedVideoFrame({
         setPlayerState(state);
         setCurrentTime(p.getCurrentTime?.() ?? 0);
         setDuration(p.getDuration?.() ?? 0);
+        setYtQuality(p.getPlaybackQuality?.() ?? null);
         // cueVideoById (pindah pertemuan) bisa me-reset kecepatan ke 1x
         if (state === STATE_PLAYING && p.getPlaybackRate?.() !== desiredSpeedRef.current) {
           p.setPlaybackRate?.(desiredSpeedRef.current);
@@ -121,6 +181,17 @@ export function ProtectedVideoFrame({
     return () => clearInterval(id);
   }, [playerRef]);
 
+  // ── Ukuran player (untuk mode kualitas & tinggi menu) ──
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const update = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // ── Kontrol otomatis sembunyi saat video berjalan ──
   const revealControls = useCallback(() => {
     setControlsVisible(true);
@@ -129,13 +200,13 @@ export function ProtectedVideoFrame({
   }, []);
 
   useEffect(() => {
-    if (!isPlaying || speedMenuOpen) {
+    if (!isPlaying || settingsOpen) {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       setControlsVisible(true);
     } else {
       revealControls();
     }
-  }, [isPlaying, speedMenuOpen, revealControls]);
+  }, [isPlaying, settingsOpen, revealControls]);
 
   useEffect(() => () => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -174,9 +245,15 @@ export function ProtectedVideoFrame({
   const changeSpeed = useCallback((rate: number) => {
     desiredSpeedRef.current = rate;
     setSpeed(rate);
-    setSpeedMenuOpen(false);
+    setSettingsPanel('closed');
     try { playerRef.current?.setPlaybackRate(rate); } catch (_) { /* noop */ }
   }, [playerRef]);
+
+  const changeQuality = useCallback((mode: QualityMode) => {
+    setQuality(mode);
+    setSettingsPanel('closed');
+    try { localStorage.setItem(QUALITY_STORAGE_KEY, mode); } catch { /* abaikan */ }
+  }, []);
 
   const toggleCaptions = useCallback(() => {
     const next = !ccOnRef.current;
@@ -248,7 +325,7 @@ export function ProtectedVideoFrame({
 
   // Klik area video: mouse → play/pause; sentuhan → tampil/sembunyikan kontrol
   const onSurfacePointerUp = (e: React.PointerEvent) => {
-    if (speedMenuOpen) { setSpeedMenuOpen(false); return; }
+    if (settingsOpen) { setSettingsPanel('closed'); return; }
     if (e.pointerType === 'mouse') {
       togglePlay();
       revealControls();
@@ -262,6 +339,9 @@ export function ProtectedVideoFrame({
 
   const showChrome = controlsVisible || !isPlaying;
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const frameStyle = iframeLayout(quality, box.w, box.h);
+  const ytQualityLabel = ytQuality ? YT_QUALITY_LABEL[ytQuality] : undefined;
+  const settingsCustomized = speed !== 1 || quality !== 'auto';
 
   return (
     <div
@@ -280,7 +360,10 @@ export function ProtectedVideoFrame({
       )}
     >
       {/* Iframe YouTube — tidak bisa disentuh sama sekali */}
-      <div className="absolute inset-0 pointer-events-none [&_iframe]:w-full [&_iframe]:h-full">
+      <div
+        className={cn('absolute pointer-events-none [&_iframe]:w-full [&_iframe]:h-full', !frameStyle && 'inset-0')}
+        style={frameStyle ?? undefined}
+      >
         <div id={containerId} className="w-full h-full" />
       </div>
 
@@ -323,8 +406,8 @@ export function ProtectedVideoFrame({
         </div>
       )}
 
-      {/* Tombol tengah: mundur 10 · play/pause · maju 10 */}
-      {playerState !== STATE_ENDED && (
+      {/* Tombol tengah: mundur 10 · play/pause · maju 10 (disembunyikan saat menu pengaturan terbuka) */}
+      {playerState !== STATE_ENDED && !settingsOpen && (
         <div
           className={cn(
             'pointer-events-none absolute inset-0 flex items-center justify-center gap-6 sm:gap-12 transition-opacity duration-300',
@@ -388,35 +471,66 @@ export function ProtectedVideoFrame({
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setSpeedMenuOpen((o) => !o)}
-                aria-label="Kecepatan putar"
-                aria-expanded={speedMenuOpen}
+                onClick={() => setSettingsPanel((p) => (p === 'closed' ? 'root' : 'closed'))}
+                aria-label="Pengaturan video (kecepatan & kualitas)"
+                aria-expanded={settingsOpen}
+                title="Pengaturan"
                 className={cn(
-                  'flex items-center gap-1 rounded-md px-2 h-9 text-xs sm:text-sm font-semibold hover:bg-white/15',
-                  speed !== 1 && 'text-accent',
+                  'relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/15',
+                  settingsCustomized && 'text-accent',
                 )}
               >
-                <Gauge className="w-4 h-4" />
-                {speed}x
+                <Settings className={cn('w-5 h-5 transition-transform', settingsOpen && 'rotate-45')} />
+                {speed !== 1 && (
+                  <span className="absolute -top-0.5 -right-0.5 rounded bg-accent px-1 text-[9px] font-bold leading-tight text-white">
+                    {speed}x
+                  </span>
+                )}
               </button>
               {/* Menu dirender di dalam player (bukan portal) supaya tetap
-                  terlihat saat fullscreen */}
-              {speedMenuOpen && (
-                <div className="absolute bottom-11 right-0 min-w-28 rounded-lg bg-black/90 py-1 shadow-lg ring-1 ring-white/10">
-                  <p className="px-3 py-1 text-[11px] uppercase tracking-wide text-white/50">Kecepatan</p>
-                  {SPEED_OPTIONS.map((rate) => (
-                    <button
-                      key={rate}
-                      type="button"
-                      onClick={() => changeSpeed(rate)}
-                      className={cn(
-                        'block w-full px-3 py-1.5 text-left text-sm hover:bg-white/15',
-                        rate === speed && 'text-accent font-semibold',
-                      )}
-                    >
-                      {rate === 1 ? 'Normal' : `${rate}x`}
-                    </button>
-                  ))}
+                  terlihat saat fullscreen; tingginya dibatasi tinggi player. */}
+              {settingsOpen && (
+                <div
+                  className="absolute bottom-11 right-0 w-56 overflow-y-auto rounded-lg bg-black/90 py-1 text-sm shadow-lg ring-1 ring-white/10"
+                  style={{ maxHeight: Math.max(box.h - 64, 120) }}
+                >
+                  {settingsPanel === 'root' && (
+                    <>
+                      <MenuRow onClick={() => setSettingsPanel('speed')} label="Kecepatan" value={speed === 1 ? 'Normal' : `${speed}x`} />
+                      <MenuRow
+                        onClick={() => setSettingsPanel('quality')}
+                        label="Kualitas"
+                        value={QUALITY_OPTIONS.find((o) => o.value === quality)!.label}
+                      />
+                    </>
+                  )}
+
+                  {settingsPanel === 'speed' && (
+                    <>
+                      <MenuBack onClick={() => setSettingsPanel('root')} label="Kecepatan" />
+                      {SPEED_OPTIONS.map((rate) => (
+                        <MenuOption key={rate} selected={rate === speed} onClick={() => changeSpeed(rate)}>
+                          {rate === 1 ? 'Normal' : `${rate}x`}
+                        </MenuOption>
+                      ))}
+                    </>
+                  )}
+
+                  {settingsPanel === 'quality' && (
+                    <>
+                      <MenuBack onClick={() => setSettingsPanel('root')} label="Kualitas" />
+                      {QUALITY_OPTIONS.map((opt) => (
+                        <MenuOption key={opt.value} selected={opt.value === quality} onClick={() => changeQuality(opt.value)}>
+                          {opt.label}
+                          <span className="ml-1.5 text-xs text-white/50">{opt.hint}</span>
+                        </MenuOption>
+                      ))}
+                      <p className="px-3 pt-1.5 pb-1 text-[11px] leading-snug text-white/50">
+                        {ytQualityLabel && isPlaying ? `Sekarang: ${ytQualityLabel}. ` : ''}
+                        Kualitas akhir tetap menyesuaikan kecepatan internet.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -430,6 +544,42 @@ export function ProtectedVideoFrame({
         </div>
       </div>
     </div>
+  );
+}
+
+function MenuRow({ label, value, onClick }: { label: string; value: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-white/15">
+      <span className="flex-1">{label}</span>
+      <span className="text-white/60">{value}</span>
+      <ChevronRight className="h-4 w-4 text-white/60" />
+    </button>
+  );
+}
+
+function MenuBack({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-1.5 border-b border-white/10 px-2 py-2 text-left font-semibold hover:bg-white/15"
+    >
+      <ChevronLeft className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
+function MenuOption({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn('flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-white/15', selected && 'text-accent font-semibold')}
+    >
+      <Check className={cn('h-4 w-4 shrink-0', !selected && 'invisible')} />
+      <span>{children}</span>
+    </button>
   );
 }
 
