@@ -72,6 +72,7 @@ import {
 import { AppShell } from '@/components/AppShell';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { FacilitasCard } from '@/components/FacilitasCard';
+import { OfflineAccessCard } from '@/components/OfflineAccessCard';
 import { ClassReviewSection } from '@/components/ClassReviewSection';
 import { Button } from '@/components/ui/button';
 import { SEO } from '@/components/SEO';
@@ -1184,6 +1185,9 @@ function PlaylistMode({
               </div>
             )}
 
+            {/* Bantuan akses offline — permanen, terpisah dari Fasilitas Kelas */}
+            <OfflineAccessCard classTitle={classTitle} className="order-2 lg:hidden" />
+
             {/* Tentang Pengajar & Review — order-3 */}
             <div className="order-3 bg-card rounded-2xl border p-5 space-y-6">
               <InstructorCard />
@@ -1221,6 +1225,7 @@ function PlaylistMode({
                 />
               </div>
             )}
+            <OfflineAccessCard classTitle={classTitle} />
             <KelasLainnyaSection />
           </aside>
         </div>
@@ -1876,6 +1881,11 @@ function LearnContent() {
               </div>
             )}
 
+            {/* Bantuan akses offline — mobile only, permanen di semua kelas */}
+            <div className="pt-4 border-t lg:hidden">
+              <OfflineAccessCard classTitle={classDetail.title} />
+            </div>
+
             {/* Sertifikat — mobile only */}
             <div className="lg:hidden">
               <CertificateSection
@@ -1997,6 +2007,9 @@ function LearnContent() {
               />
             </div>
           )}
+
+          {/* Card: Bantuan akses offline (terpisah dari Fasilitas Kelas) */}
+          <OfflineAccessCard classTitle={classDetail.title} />
 
           {/* Card: Sertifikat */}
           <CertificateSection

@@ -2,11 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { MessageCircle } from 'lucide-react';
 import { getSettings } from '@/lib/db';
 
-function toWaUrl(phone: string): string {
+export function toWaUrl(phone: string, text?: string): string {
   const digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('62')) return `https://wa.me/${digits}`;
-  if (digits.startsWith('0')) return `https://wa.me/62${digits.slice(1)}`;
-  return `https://wa.me/${digits}`;
+  const number = digits.startsWith('0') ? `62${digits.slice(1)}` : digits;
+  return `https://wa.me/${number}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 }
 
 export function FloatingWhatsAppButton() {
