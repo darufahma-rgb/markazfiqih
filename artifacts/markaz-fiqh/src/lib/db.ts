@@ -141,35 +141,79 @@ const classDetailCache = new Map<string, { data: any; ts: number }>();
 const CLASS_CACHE_TTL = 90_000; // 90 seconds
 
 
+// ── Kolom kelas tambahan (Revisi Batch 2) ─────────────────────────────────────
+// Ditambahkan oleh supabase/migrations/20261126_revisi_batch_2.sql. Kalau SQL
+// itu belum dijalankan, query dengan kolom ini gagal ("column does not
+// exist") — maka kita ulangi tanpa kolom tambahan supaya situs tetap jalan.
+const CLASS_EXTRA_COLS = 'sales_status, about_text, notes_text, owned_count_display';
+let classExtraColsAvailable: boolean | null = null;
+
+export type SalesStatus = 'open' | 'paused' | 'withdrawn';
+
+function isMissingColumnError(error: any): boolean {
+  const msg = String(error?.message ?? '');
+  return error?.code === '42703' || error?.code === 'PGRST204' || /column .* does not exist/i.test(msg);
+}
+
+async function withClassExtraCols<T>(
+  run: (extraCols: string) => PromiseLike<{ data: T; error: any }>,
+): Promise<{ data: T; error: any }> {
+  if (classExtraColsAvailable !== false) {
+    const res = await run(`, ${CLASS_EXTRA_COLS}`);
+    if (!res.error) {
+      classExtraColsAvailable = true;
+      return res;
+    }
+    if (!isMissingColumnError(res.error)) return res;
+    classExtraColsAvailable = false;
+  }
+  return run('');
+}
+
+function readClassExtras(c: any) {
+  const raw = c?.sales_status;
+  const salesStatus: SalesStatus = raw === 'paused' || raw === 'withdrawn' ? raw : 'open';
+  return {
+    salesStatus,
+    aboutText: (c?.about_text as string | null) ?? null,
+    notesText: (c?.notes_text as string | null) ?? null,
+    ownedCountDisplay: (c?.owned_count_display as number | null) ?? null,
+  };
+}
+
 export async function listClasses(params?: {
   search?: string;
   category?: string;
   level?: string;
   instructorId?: string;
-  /** Kalau true, tampilkan semua kelas termasuk draft — khusus Admin Panel */
+  /** Kalau true, tampilkan semua kelas termasuk draft & yang ditarik — khusus Admin Panel */
   includeAll?: boolean;
 }) {
-  let query = supabase
-    .from('classes')
-    .select(`
-      id, title, description, cover_image, base_price, discount_price,
-      status, level, category, youtube_playlist_id, meeting_count, display_order, certificate_template_url,
-      instructors ( id, name, photo_url ),
-      modules ( id, dars ( id, duration_minutes ) )
-    `)
-    .order('display_order', { ascending: true })
-    .order('created_at', { ascending: false });
+  const { data, error } = await withClassExtraCols<any[] | null>((extraCols) => {
+    let query = supabase
+      .from('classes')
+      .select(`
+        id, title, description, cover_image, base_price, discount_price,
+        status, level, category, youtube_playlist_id, meeting_count, display_order, certificate_template_url${extraCols},
+        instructors ( id, name, photo_url ),
+        modules ( id, dars ( id, duration_minutes ) )
+      `)
+      .order('display_order', { ascending: true })
+      .order('created_at', { ascending: false });
 
-  if (!params?.includeAll) query = query.eq('status', 'published');
+    if (!params?.includeAll) query = query.eq('status', 'published');
 
-  if (params?.search) query = query.ilike('title', `%${params.search}%`);
-  if (params?.category) query = query.eq('category', params.category);
-  if (params?.level) query = query.eq('level', params.level);
-  if (params?.instructorId) query = query.eq('instructor_id', params.instructorId);
-
-  const { data, error } = await query;
+    if (params?.search) query = query.ilike('title', `%${params.search}%`);
+    if (params?.category) query = query.eq('category', params.category);
+    if (params?.level) query = query.eq('level', params.level);
+    if (params?.instructorId) query = query.eq('instructor_id', params.instructorId);
+    return query;
+  });
   if (error) throw error;
-  return (data ?? []).map((c: any) => {
+  const rows = (data ?? []).filter(
+    (c: any) => params?.includeAll || c.sales_status !== 'withdrawn',
+  );
+  return rows.map((c: any) => {
     const modules = c.modules ?? [];
     const dars = modules.flatMap((m: any) => m.dars ?? []);
     return {
@@ -187,6 +231,7 @@ export async function listClasses(params?: {
       meetingCount: (c.meeting_count ?? null) as number | null,
       displayOrder: (c.display_order ?? 0) as number,
       certificateTemplateUrl: (c.certificate_template_url as string | null) ?? null,
+      ...readClassExtras(c),
       totalDurationMinutes: dars.reduce(
         (acc: number, d: any) => acc + (d.duration_minutes ?? 0),
         0,
@@ -235,13 +280,13 @@ export async function getClassById(idOrSlug: string) {
   }
 
   // ── Fetch class detail ─────────────────────────────────────────────────────
-  const { data, error } = await supabase
+  const { data, error } = await withClassExtraCols<any>((extraCols) => supabase
     .from('classes')
     .select(`
       id, title, description, cover_image, base_price, discount_price,
       status, level, category, youtube_playlist_id, gdrive_materi_url, wa_group_url,
       soal_latihan_url, ebook_url, testimoni_form_url, meeting_count, display_order,
-      reverse_video_order, certificate_template_url, instructor_id,
+      reverse_video_order, certificate_template_url, instructor_id${extraCols},
       related_ebook_id, ebooks:related_ebook_id ( id, title, cover_image ),
       instructors ( id, name, photo_url, bio ),
       modules (
@@ -250,7 +295,7 @@ export async function getClassById(idOrSlug: string) {
       )
     `)
     .eq('id', targetId)
-    .single();
+    .single());
   if (error) throw error;
 
   const inst = (data as any).instructors as any;
@@ -329,6 +374,7 @@ export async function getClassById(idOrSlug: string) {
     moduleCount: modules.length,
     meetingCount: ((data as any).meeting_count ?? null) as number | null,
     certificateTemplateUrl: ((data as any).certificate_template_url as string | null) ?? null,
+    ...readClassExtras(data),
     totalDurationMinutes: modules
       .flatMap((m) => m.dars)
       .reduce((acc, d) => acc + (d.durationMinutes ?? 0), 0),
@@ -903,7 +949,10 @@ export async function getClassEnrollmentStats(): Promise<Record<string, { enroll
 
 
 export async function listEnrollments(userId: string): Promise<EnrollmentItem[]> {
-  const { data, error } = await supabase
+  // Empat query di bawah tidak saling bergantung — jalankan paralel supaya
+  // Dashboard / Kelas Saya tidak menunggu 4x bolak-balik ke server.
+  const [enrollRes, progressRes, completionRes, watchRes] = await Promise.all([
+    supabase
     .from('enrollments')
     .select(`
       id, enrolled_at, is_completed,
@@ -915,23 +964,22 @@ export async function listEnrollments(userId: string): Promise<EnrollmentItem[]>
       )
     `)
     .eq('user_id', userId)
-    .order('enrolled_at', { ascending: false }); // fallback: terbaru dibeli dulu
+    .order('enrolled_at', { ascending: false }), // fallback: terbaru dibeli dulu
+    // Satu query untuk semua progress user — hindari N+1
+    supabase.from('progress').select('dars_id').eq('user_id', userId),
+    // Pertemuan playlist yang sudah ditandai selesai — dipakai kelas berbasis
+    // YouTube playlist (yang tidak punya modul/dars).
+    supabase.from('video_completions').select('class_id, video_index').eq('user_id', userId),
+    // Kapan terakhir nonton per kelas (dipakai untuk sorting dashboard)
+    supabase.from('video_watch_progress').select('class_id, updated_at').eq('user_id', userId),
+  ]);
+  const { data, error } = enrollRes;
   if (error) throw error;
-
-  // Satu query untuk semua progress user — hindari N+1
-  const { data: progressRows, error: progressError } = await supabase
-    .from('progress')
-    .select('dars_id')
-    .eq('user_id', userId);
+  const { data: progressRows, error: progressError } = progressRes;
   if (progressError) throw progressError;
   const completedDarsIds = new Set((progressRows ?? []).map((p: any) => p.dars_id as string));
 
-  // Satu query untuk semua pertemuan playlist yang sudah ditandai selesai —
-  // dipakai kelas berbasis YouTube playlist (yang tidak punya modul/dars).
-  const { data: completionRows, error: completionError } = await supabase
-    .from('video_completions')
-    .select('class_id, video_index')
-    .eq('user_id', userId);
+  const { data: completionRows, error: completionError } = completionRes;
   if (completionError) throw completionError;
   const completedMeetingsByClass = new Map<string, Set<number>>();
   (completionRows ?? []).forEach((r: any) => {
@@ -941,11 +989,7 @@ export async function listEnrollments(userId: string): Promise<EnrollmentItem[]>
     completedMeetingsByClass.set(key, set);
   });
 
-  // Ambil kapan terakhir nonton per kelas (dipakai untuk sorting dashboard)
-  const { data: watchRows, error: watchError } = await supabase
-    .from('video_watch_progress')
-    .select('class_id, updated_at')
-    .eq('user_id', userId);
+  const { data: watchRows, error: watchError } = watchRes;
   if (watchError) throw watchError;
   const lastWatchedMap = new Map(
     (watchRows ?? []).map((w: any) => [w.class_id as string, w.updated_at as string]),
@@ -1474,30 +1518,39 @@ export async function createClass(data: {
   ebookUrl?: string | null; relatedEbookId?: string | null; testimoniFormUrl?: string | null; meetingCount?: number | null;
   displayOrder?: number | null; reverseVideoOrder?: boolean;
   certificateTemplateUrl?: string | null;
+  salesStatus?: SalesStatus; aboutText?: string | null; notesText?: string | null;
+  ownedCountDisplay?: number | null;
 }) {
-  const { data: created, error } = await supabase
-    .from('classes')
-    .insert({
-      title: data.title, description: data.description ?? '',
-      cover_image: data.coverImage ?? '', base_price: data.basePrice,
-      discount_price: data.discountPrice ?? null, status: data.status,
-      level: data.level ?? null, category: data.category ?? null,
-      instructor_id: data.instructorId,
-      youtube_playlist_id: data.youtubePlaylistId ?? null,
-      gdrive_materi_url: data.gdriveMateriUrl ?? null,
-      wa_group_url: data.waGroupUrl ?? null,
-      soal_latihan_url: data.soalLatihanUrl ?? null,
-      ebook_url: data.ebookUrl ?? null,
-      related_ebook_id: data.relatedEbookId ?? null,
-      testimoni_form_url: data.testimoniFormUrl ?? null,
-      meeting_count: data.meetingCount ?? null,
-      display_order: data.displayOrder ?? 0,
-      reverse_video_order: data.reverseVideoOrder ?? false,
-      certificate_template_url: data.certificateTemplateUrl ?? null,
-    })
-    .select().single();
-  if (error) throw error;
-  return created;
+  const row: Record<string, unknown> = {
+    title: data.title, description: data.description ?? '',
+    cover_image: data.coverImage ?? '', base_price: data.basePrice,
+    discount_price: data.discountPrice ?? null, status: data.status,
+    level: data.level ?? null, category: data.category ?? null,
+    instructor_id: data.instructorId,
+    youtube_playlist_id: data.youtubePlaylistId ?? null,
+    gdrive_materi_url: data.gdriveMateriUrl ?? null,
+    wa_group_url: data.waGroupUrl ?? null,
+    soal_latihan_url: data.soalLatihanUrl ?? null,
+    ebook_url: data.ebookUrl ?? null,
+    related_ebook_id: data.relatedEbookId ?? null,
+    testimoni_form_url: data.testimoniFormUrl ?? null,
+    meeting_count: data.meetingCount ?? null,
+    display_order: data.displayOrder ?? 0,
+    reverse_video_order: data.reverseVideoOrder ?? false,
+    certificate_template_url: data.certificateTemplateUrl ?? null,
+  };
+  const extras: Record<string, unknown> = {
+    sales_status: data.salesStatus ?? 'open',
+    about_text: data.aboutText ?? null,
+    notes_text: data.notesText ?? null,
+    owned_count_display: data.ownedCountDisplay ?? null,
+  };
+  let res = await supabase.from('classes').insert({ ...row, ...extras }).select().single();
+  if (res.error && isMissingColumnError(res.error)) {
+    res = await supabase.from('classes').insert(row).select().single();
+  }
+  if (res.error) throw res.error;
+  return res.data;
 }
 
 export async function updateClass(
@@ -1512,6 +1565,8 @@ export async function updateClass(
     ebookUrl: string | null; relatedEbookId: string | null; testimoniFormUrl: string | null; meetingCount: number | null;
     displayOrder: number; reverseVideoOrder: boolean;
     certificateTemplateUrl: string | null;
+    salesStatus: SalesStatus; aboutText: string | null; notesText: string | null;
+    ownedCountDisplay: number | null;
   }>,
 ) {
   const patch: Record<string, unknown> = {};
@@ -1535,8 +1590,22 @@ export async function updateClass(
   if (data.displayOrder !== undefined) patch.display_order = data.displayOrder;
   if (data.reverseVideoOrder !== undefined) patch.reverse_video_order = data.reverseVideoOrder;
   if ('certificateTemplateUrl' in data) patch.certificate_template_url = data.certificateTemplateUrl;
-  const { error } = await supabase.from('classes').update(patch).eq('id', id);
+  const extras: Record<string, unknown> = {};
+  if (data.salesStatus !== undefined) extras.sales_status = data.salesStatus;
+  if ('aboutText' in data) extras.about_text = data.aboutText;
+  if ('notesText' in data) extras.notes_text = data.notesText;
+  if ('ownedCountDisplay' in data) extras.owned_count_display = data.ownedCountDisplay;
+  let { error } = await supabase.from('classes').update({ ...patch, ...extras }).eq('id', id);
+  if (error && isMissingColumnError(error) && Object.keys(extras).length > 0) {
+    // SQL Revisi Batch 2 belum dijalankan — simpan perubahan lainnya saja.
+    if (Object.keys(patch).length === 0) {
+      throw new Error('Fitur ini butuh SQL "20261126_revisi_batch_2.sql" dijalankan dulu di Supabase.');
+    }
+    ({ error } = await supabase.from('classes').update(patch).eq('id', id));
+  }
   if (error) throw error;
+  // Detail kelas di-cache 90 detik — buang supaya perubahan langsung terlihat.
+  classDetailCache.clear();
 }
 
 export async function deleteClass(id: string) {
@@ -3196,4 +3265,87 @@ export async function updateUserPhone(userId: string, phone: string): Promise<vo
       { onConflict: 'user_id' },
     );
   if (error) throw error;
+}
+
+// ── Riwayat Transaksi (pelajar) ──────────────────────────────────────────────
+
+export type MyTransaction = {
+  id: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  paidAt: string | null;
+  items: { id: string; title: string; kind: 'kelas' | 'paket' | 'ebook'; price: number }[];
+};
+
+/** Semua invoice milik user yang sedang login, terbaru dulu (dibatasi RLS). */
+export async function listMyTransactions(userId: string): Promise<MyTransaction[]> {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(`
+      id, total_amount, status, created_at, paid_at,
+      invoice_items ( id, class_id, bundle_id, ebook_id, price, classes ( title ), bundles ( title ) )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+
+  const rows = (data ?? []) as any[];
+
+  // Judul ebook dari VIEW ebooks_catalog (tabel ebooks hanya bisa dibaca admin).
+  const ebookIds = Array.from(
+    new Set(rows.flatMap((r) => (r.invoice_items ?? []).map((i: any) => i.ebook_id).filter(Boolean))),
+  ) as string[];
+  const ebookTitles = new Map<string, string>();
+  if (ebookIds.length > 0) {
+    const { data: ebookRows } = await supabase.from('ebooks_catalog').select('id, title').in('id', ebookIds);
+    for (const e of ebookRows ?? []) ebookTitles.set(e.id as string, e.title as string);
+  }
+
+  return rows.map((r) => ({
+    id: r.id as string,
+    totalAmount: (r.total_amount ?? 0) as number,
+    status: (r.status ?? 'pending') as string,
+    createdAt: r.created_at as string,
+    paidAt: (r.paid_at as string | null) ?? null,
+    items: ((r.invoice_items ?? []) as any[]).map((i) => ({
+      id: i.id as string,
+      kind: i.bundle_id ? 'paket' : i.ebook_id ? 'ebook' : 'kelas',
+      title: i.bundle_id
+        ? (i.bundles?.title ?? 'Paket')
+        : i.ebook_id
+        ? (ebookTitles.get(i.ebook_id) ?? 'E-Book')
+        : (i.classes?.title ?? 'Kelas'),
+      price: (i.price ?? 0) as number,
+    })),
+  }));
+}
+
+// ── Profil pengguna (foto & nama tampilan) ───────────────────────────────────
+
+/** Unggah foto profil ke bucket `avatars/<userId>/...` dan kembalikan URL publiknya. */
+export async function uploadMyAvatar(userId: string, file: File): Promise<string> {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
+  if (error) throw new Error(`Gagal mengunggah foto: ${error.message}`);
+  return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+}
+
+export async function updateMyProfile(
+  userId: string,
+  patch: { nickname?: string; customAvatarUrl?: string | null },
+): Promise<void> {
+  const row: Record<string, unknown> = { user_id: userId, updated_at: new Date().toISOString() };
+  if (patch.nickname !== undefined) row.nickname = patch.nickname;
+  if (patch.customAvatarUrl !== undefined) row.custom_avatar_url = patch.customAvatarUrl;
+  const { error } = await supabase.from('user_profiles').upsert(row, { onConflict: 'user_id' });
+  if (error) {
+    if (isMissingColumnError(error)) {
+      throw new Error('Fitur foto profil butuh SQL "20261126_revisi_batch_2.sql" dijalankan dulu di Supabase.');
+    }
+    throw error;
+  }
 }

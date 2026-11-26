@@ -67,9 +67,11 @@ import {
   Loader2,
   Video,
   User,
+  StickyNote,
 } from 'lucide-react';
 
 import { AppShell } from '@/components/AppShell';
+import { FormattedText } from '@/components/FormattedText';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { FacilitasCard } from '@/components/FacilitasCard';
 import { OfflineAccessCard } from '@/components/OfflineAccessCard';
@@ -130,6 +132,19 @@ function disableAutoCaptions(player: any) {
     player.unloadModule('captions');
     player.unloadModule('cc');
   } catch (_) { /* noop — modul belum siap, aman diabaikan */ }
+}
+
+// ── Catatan Kelas (diisi admin per kelas) ────────────────────────────────────
+function ClassNotesCard({ text, className = '' }: { text: string; className?: string }) {
+  return (
+    <div className={`bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900 p-5 space-y-2 ${className}`}>
+      <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <StickyNote className="h-4 w-4 text-amber-600" />
+        Catatan
+      </p>
+      <FormattedText text={text} className="text-sm text-foreground/85" />
+    </div>
+  );
 }
 
 // ── Video Placeholder ─────────────────────────────────────────────────────────
@@ -410,6 +425,7 @@ function PlaylistMode({
   ebookUrl,
   testimoniFormUrl,
   reverseVideoOrder = false,
+  notesText = null,
 }: {
   classId: string;
   classTitle: string;
@@ -430,6 +446,7 @@ function PlaylistMode({
   ebookUrl?: string | null;
   testimoniFormUrl?: string | null;
   reverseVideoOrder?: boolean;
+  notesText?: string | null;
 }) {
   const queryClient = useQueryClient();
   const isEnrolled = !!enrollmentId;
@@ -1188,6 +1205,9 @@ function PlaylistMode({
             {/* Bantuan akses offline — permanen, terpisah dari Fasilitas Kelas */}
             <OfflineAccessCard classTitle={classTitle} className="order-2 lg:hidden" />
 
+            {/* Catatan dari admin — tepat sebelum Tentang Pengajar */}
+            {notesText?.trim() && <ClassNotesCard text={notesText} className="order-3" />}
+
             {/* Tentang Pengajar & Review — order-3 */}
             <div className="order-3 bg-card rounded-2xl border p-5 space-y-6">
               <InstructorCard />
@@ -1623,6 +1643,7 @@ function LearnContent() {
         ebookUrl={classDetail.ebookUrl}
         testimoniFormUrl={classDetail.testimoniFormUrl}
         reverseVideoOrder={classDetail.reverseVideoOrder}
+        notesText={classDetail.notesText}
       />
     );
   }
@@ -1896,7 +1917,8 @@ function LearnContent() {
             </div>
 
             {/* Mobile: Tentang Pengajar (desktop: tampil di sidebar kanan) */}
-            <div className="pt-4 border-t lg:hidden">
+            <div className="pt-4 border-t lg:hidden space-y-4">
+              {classDetail.notesText?.trim() && <ClassNotesCard text={classDetail.notesText} />}
               <div className="bg-card rounded-2xl border p-5 space-y-3">
                 <p className="text-sm font-semibold text-foreground">Tentang Pengajar</p>
                 <div className="flex items-start gap-3">
@@ -1948,6 +1970,9 @@ function LearnContent() {
 
         {/* ── Sidebar kanan (desktop only): Tentang Pengajar + Fasilitas ─────── */}
         <aside className="hidden lg:flex flex-col gap-4 w-[320px] shrink-0 p-4 py-6">
+          {/* Card: Catatan dari admin — di atas Tentang Pengajar */}
+          {classDetail.notesText?.trim() && <ClassNotesCard text={classDetail.notesText} />}
+
           {/* Card: Tentang Pengajar */}
           <div className="bg-card rounded-2xl border p-5 space-y-3">
             <p className="text-sm font-semibold text-foreground">Tentang Pengajar</p>

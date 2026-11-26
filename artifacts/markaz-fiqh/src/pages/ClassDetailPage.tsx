@@ -9,8 +9,6 @@ import {
   Clock,
   Infinity,
   Loader2,
-  Lock,
-  PlayCircle,
   PlaySquare,
   ShieldCheck,
   ShoppingCart,
@@ -20,20 +18,15 @@ import {
 
 import { SEO } from '@/components/SEO';
 import { AppShell } from '@/components/AppShell';
+import { FormattedText } from '@/components/FormattedText';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShareButton } from '@/components/ShareButton';
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { formatPrice } from '@/data/mockClasses';
 import { useQuery } from '@tanstack/react-query';
-import { getClassById, listEnrollments, getClassEnrollmentStats, getVideoCompletions, listProgress } from '@/lib/db';
+import { getClassById, listEnrollments, getVideoCompletions, listProgress } from '@/lib/db';
 import { FacilitasCard } from '@/components/FacilitasCard';
 import { ClassReviewSection } from '@/components/ClassReviewSection';
 import { toast } from 'sonner';
@@ -139,12 +132,6 @@ export default function ClassDetailPage() {
   const { classIdsInCart, addToCart, isAdding } = useCart();
   const [, setLocation] = useLocation();
 
-  const enrollmentStatsQuery = useQuery({
-    queryKey: ['class-enrollment-stats'],
-    queryFn: getClassEnrollmentStats,
-    staleTime: 10 * 60 * 1000,
-  });
-  const enrollmentCount = enrollmentStatsQuery.data?.[cls?.id ?? '']?.enrolledCount ?? 0;
 
   // ── Progress Belajar (kartu beli) ──────────────────────────────────────────
   // Kelas berbasis playlist YouTube tidak punya modul/dars — dihitung dari
@@ -168,10 +155,6 @@ export default function ClassDetailPage() {
     : moduleProgressItems.filter((p) => p.isCompleted).length;
   const progressPct = progressTotal > 0 ? Math.round((progressCompleted / progressTotal) * 100) : 0;
   const showProgress = progressTotal > 0;
-  // Dipakai kurikulum untuk menandai pelajaran yang sudah diselesaikan.
-  const completedDarsIds = new Set(
-    moduleProgressItems.filter((p) => p.isCompleted).map((p) => p.darsId),
-  );
 
   useEffect(() => {
     if (cls) {
@@ -188,7 +171,15 @@ export default function ClassDetailPage() {
   const inCart = classIdsInCart.has(cls.id);
   const isEnrolled = enrolledClassIdsQuery.data?.has(cls.id) ?? false;
 
+  // Kelas yang ditarik dari penjualan hanya bisa dibuka oleh yang sudah memilikinya.
+  if (cls.salesStatus === 'withdrawn' && !isEnrolled) {
+    if (user && enrolledClassIdsQuery.isLoading) return <ClassDetailLoading />;
+    return <ClassNotFound />;
+  }
+  const isForSale = cls.salesStatus === 'open';
+
   const handleBuyClick = async () => {
+    if (!isForSale) return;
     if (!user) {
       setLocation(`/login?redirect=${encodeURIComponent(`/class/${cls.id}`)}`);
       return;
@@ -278,10 +269,12 @@ export default function ClassDetailPage() {
                       </span>
                     </>
                   )}
-                  <span className="flex items-center gap-1.5 font-semibold text-primary">
-                    <Users className="w-4 h-4" />
-                    {enrollmentCount > 0 ? `${enrollmentCount} Pelajar Terdaftar` : 'Baru Rilis'}
-                  </span>
+                  {cls.ownedCountDisplay != null && cls.ownedCountDisplay > 0 && (
+                    <span className="flex items-center gap-1.5 font-semibold text-primary">
+                      <Users className="w-4 h-4" />
+                      Dimiliki {cls.ownedCountDisplay} Pelajar
+                    </span>
+                  )}
                   <span className="flex items-center gap-1.5">
                     <Infinity className="w-4 h-4" />
                     Akses seumur hidup
@@ -336,110 +329,20 @@ export default function ClassDetailPage() {
                 </div>
               </motion.div>
 
-              {/* Curriculum */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.25 }}
-                className="space-y-4"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="font-serif text-2xl font-bold text-foreground">
-                    Kurikulum
-                  </h2>
-                  {!(cls.youtubePlaylistId && cls.modules.length === 0) && (
-                    <span className="text-sm text-muted-foreground">
-                      {cls.moduleCount} modul
-                    </span>
-                  )}
-                </div>
-
-                {cls.youtubePlaylistId && cls.modules.length === 0 ? (
-                  /* Playlist mode: no module/dars breakdown */
-                  <div className="flex items-center gap-4 rounded-xl border bg-card px-5 py-4">
-                    <div className="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <PlaySquare className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm text-foreground">
-                        Kelas ini berupa playlist video berkelanjutan
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Akses penuh playlist setelah kelas dibeli
-                      </p>
-                    </div>
+              {/* Tentang Kelas (menggantikan Kurikulum — isi diatur di Admin Panel) */}
+              {cls.aboutText?.trim() && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.25 }}
+                  className="space-y-3"
+                >
+                  <h2 className="font-serif text-2xl font-bold text-foreground">Tentang Kelas</h2>
+                  <div className="rounded-xl border bg-card px-5 py-4">
+                    <FormattedText text={cls.aboutText} className="text-sm text-foreground/85" />
                   </div>
-                ) : (
-                  /* Normal mode: module/dars accordion */
-                  <Accordion type="multiple" className="space-y-2">
-                    {cls.modules.map((mod: any) => (
-                      <AccordionItem
-                        key={mod.id}
-                        value={mod.id}
-                        className="border rounded-lg px-4 bg-card"
-                      >
-                        <AccordionTrigger className="hover:no-underline py-4 transition-colors duration-150">
-                          <div className="flex items-center gap-3 text-left">
-                            <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                              {mod.orderIndex}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm text-foreground">
-                                {mod.title}
-                              </p>
-                              {mod.durationMinutes != null && (
-                                <p className="text-xs text-muted-foreground font-normal mt-0.5">
-                                  {formatDuration(mod.durationMinutes)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                          <div className="space-y-1">
-                            {mod.dars.length === 0 ? (
-                              <p className="py-2 px-2 text-sm text-muted-foreground">
-                                Belum ada pelajaran di modul ini.
-                              </p>
-                            ) : (
-                              mod.dars.map((dars: any) => {
-                                const isDone = completedDarsIds.has(dars.id);
-
-                                return (
-                                  <div
-                                    key={dars.id}
-                                    className="flex items-start gap-2.5 py-2 px-2 rounded-md text-sm text-muted-foreground"
-                                  >
-                                    <div className="shrink-0 mt-0.5">
-                                      {!isEnrolled ? (
-                                        <Lock className="w-4 h-4 text-muted-foreground" />
-                                      ) : isDone ? (
-                                        <CheckCircle2 className="w-4 h-4 text-success" />
-                                      ) : (
-                                        <PlayCircle className="w-4 h-4 text-primary" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="leading-snug text-foreground/80">
-                                        {dars.title}
-                                      </p>
-                                      {dars.durationMinutes != null && (
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                          {formatDuration(dars.durationMinutes)}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                )}
-              </motion.div>
+                </motion.div>
+              )}
             </div>
 
             {/* ── Right Column: Purchase Card ── */}
@@ -522,6 +425,16 @@ export default function ClassDetailPage() {
 
                     {/* CTA Button */}
                     <div className="p-6 space-y-4">
+                      {!isForSale ? (
+                        <div className="space-y-2 text-center">
+                          <Button size="lg" variant="outline" className="w-full text-base font-semibold" disabled>
+                            Tidak Dijual Sementara
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            Kelas ini sedang tidak dibuka untuk pembelian.
+                          </p>
+                        </div>
+                      ) : (
                       <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
                         <Button
                           size="lg"
@@ -549,8 +462,9 @@ export default function ClassDetailPage() {
                           {inCart ? 'Di Keranjang' : 'Tambah ke Keranjang'}
                         </Button>
                       </motion.div>
+                      )}
 
-                      {!user && (
+                      {!user && isForSale && (
                         <p className="text-xs text-center text-muted-foreground">
                           Kamu akan diminta masuk dengan Google terlebih dahulu.
                         </p>
@@ -625,7 +539,7 @@ export default function ClassDetailPage() {
 
       {/* Mobile sticky buy bar — hanya muncul di bawah lg, disembunyikan jika sudah enrolled */}
       {!isEnrolled && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm px-4 pt-3 pb-[calc(0.75rem+var(--sab))] flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+        <div className="lg:hidden fixed bottom-[var(--bnav,0px)] left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm px-4 pt-3 pb-3 flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
           <div className="min-w-0">
             {hasDiscount ? (
               <>
@@ -642,6 +556,11 @@ export default function ClassDetailPage() {
               </p>
             )}
           </div>
+          {!isForSale ? (
+            <span className="shrink-0 inline-flex items-center h-10 px-4 rounded-lg border border-border text-sm font-semibold text-muted-foreground">
+              Tidak Dijual Sementara
+            </span>
+          ) : (
           <motion.button
             onClick={handleBuyClick}
             disabled={isAdding}
@@ -666,6 +585,7 @@ export default function ClassDetailPage() {
               </>
             )}
           </motion.button>
+          )}
         </div>
       )}
     </AppShell>

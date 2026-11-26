@@ -34,6 +34,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
+    <script>
+      // Login instan: pengguna yang sesinya masih tersimpan langsung diarahkan
+      // ke Dashboard sebelum aplikasi dimuat, tanpa sempat melihat landing page.
+      (function () {
+        try {
+          if (location.pathname !== '/' || !localStorage.getItem('mf_user_cache_v1')) return;
+          for (var i = 0; i < localStorage.length; i++) {
+            if (/^sb-.*-auth-token$/.test(localStorage.key(i) || '')) {
+              history.replaceState(null, '', '/dashboard' + location.search + location.hash);
+              return;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

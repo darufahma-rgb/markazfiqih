@@ -111,6 +111,26 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Kelas yang sedang tidak dijual (Revisi Batch 2) ──────────────────────
+    // Kelas 'paused' / 'withdrawn' bisa saja sudah ada di keranjang sebelum
+    // admin mengubah statusnya. Kalau kolom sales_status belum ada (SQL belum
+    // dijalankan), query ini error dan pengecekan dilewati.
+    const singleClassIds = (cartItems as any[]).filter((i) => i.class_id).map((i) => i.class_id);
+    if (singleClassIds.length > 0) {
+      const { data: unsold, error: unsoldError } = await supabaseAdmin
+        .from('classes')
+        .select('id, title, sales_status')
+        .in('id', singleClassIds)
+        .neq('sales_status', 'open');
+      if (!unsoldError && unsold && unsold.length > 0) {
+        const titles = unsold.map((c: any) => c.title).join(', ');
+        return json(
+          { error: `Kelas berikut sedang tidak dijual: ${titles}. Hapus dari keranjang untuk melanjutkan.` },
+          400,
+        );
+      }
+    }
+
     // ── Kelas individual yang sudah tercakup bundle ───────────────────────────
     const coveredByBundle = new Set<string>();
     for (const item of cartItems as any[]) {
