@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -19,22 +20,6 @@ import ClassDetailPage from '@/pages/ClassDetailPage';
 import MyClassesPage from '@/pages/MyClassesPage';
 import CartPage from '@/pages/CartPage';
 import LearnPage from '@/pages/LearnPage';
-import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
-import AdminClassesPage from '@/pages/admin/AdminClassesPage';
-import AdminInstructorsPage from '@/pages/admin/AdminInstructorsPage';
-import AdminOrdersPage from '@/pages/admin/AdminOrdersPage';
-import AdminTestimonialsPage from '@/pages/admin/AdminTestimonialsPage';
-import AdminReviewsPage from '@/pages/admin/AdminReviewsPage';
-import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
-import AdminManageAdminsPage from '@/pages/admin/AdminManageAdminsPage';
-import AdminDashboardMessagesPage from '@/pages/admin/AdminDashboardMessagesPage';
-import AdminUsersPage from '@/pages/admin/AdminUsersPage';
-import AdminCatalogLayoutPage from '@/pages/admin/AdminCatalogLayoutPage';
-import AdminBundlesPage from '@/pages/admin/AdminBundlesPage';
-import AdminEbooksPage from '@/pages/admin/AdminEbooksPage';
-import AdminNotificationsPage from '@/pages/admin/AdminNotificationsPage';
-import AdminCertificatesPage from '@/pages/admin/AdminCertificatesPage';
-import AdminVouchersPage from '@/pages/admin/AdminVouchersPage';
 import CertificatePage from '@/pages/CertificatePage';
 import InstructorsPage from '@/pages/InstructorsPage';
 import InstructorDetailPage from '@/pages/InstructorDetailPage';
@@ -44,6 +29,27 @@ import MyEbooksPage from '@/pages/MyEbooksPage';
 import EbookDetailPage from '@/pages/EbookDetailPage';
 import CheckoutPage from '@/pages/CheckoutPage';
 import PaymentPage from '@/pages/PaymentPage';
+import TransactionsPage from '@/pages/TransactionsPage';
+import AccountPage from '@/pages/AccountPage';
+
+// Halaman admin dimuat terpisah (lazy) supaya pelajar tidak perlu mengunduh
+// kode Panel Admin — Dashboard & halaman lain jadi lebih cepat terbuka.
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
+const AdminClassesPage = lazy(() => import('@/pages/admin/AdminClassesPage'));
+const AdminInstructorsPage = lazy(() => import('@/pages/admin/AdminInstructorsPage'));
+const AdminOrdersPage = lazy(() => import('@/pages/admin/AdminOrdersPage'));
+const AdminTestimonialsPage = lazy(() => import('@/pages/admin/AdminTestimonialsPage'));
+const AdminReviewsPage = lazy(() => import('@/pages/admin/AdminReviewsPage'));
+const AdminSettingsPage = lazy(() => import('@/pages/admin/AdminSettingsPage'));
+const AdminManageAdminsPage = lazy(() => import('@/pages/admin/AdminManageAdminsPage'));
+const AdminDashboardMessagesPage = lazy(() => import('@/pages/admin/AdminDashboardMessagesPage'));
+const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage'));
+const AdminCatalogLayoutPage = lazy(() => import('@/pages/admin/AdminCatalogLayoutPage'));
+const AdminBundlesPage = lazy(() => import('@/pages/admin/AdminBundlesPage'));
+const AdminEbooksPage = lazy(() => import('@/pages/admin/AdminEbooksPage'));
+const AdminNotificationsPage = lazy(() => import('@/pages/admin/AdminNotificationsPage'));
+const AdminCertificatesPage = lazy(() => import('@/pages/admin/AdminCertificatesPage'));
+const AdminVouchersPage = lazy(() => import('@/pages/admin/AdminVouchersPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,12 +75,20 @@ const withP = (Component: React.ComponentType) => {
   };
 };
 
+const AdminPageFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+  </div>
+);
+
 const withAdmin = (Component: React.ComponentType) => {
   return function AdminRouteWrapper() {
     return (
       <ProtectedRoute>
         <RequireAdminRoute>
-          <Component />
+          <Suspense fallback={<AdminPageFallback />}>
+            <Component />
+          </Suspense>
         </RequireAdminRoute>
       </ProtectedRoute>
     );
@@ -96,6 +110,8 @@ const ProtectedMyEbooksPage = withP(MyEbooksPage);
 const ProtectedCheckoutPage = withP(CheckoutPage);
 const ProtectedPaymentPage = withP(PaymentPage);
 const ProtectedCertificatePage = withP(CertificatePage);
+const ProtectedTransactionsPage = withP(TransactionsPage);
+const ProtectedAccountPage = withP(AccountPage);
 
 const AdminCertificates = withAdmin(AdminCertificatesPage);
 const AdminClasses = withAdmin(AdminClassesPage);
@@ -140,6 +156,8 @@ function Router() {
       <Route path="/checkout" component={ProtectedCheckoutPage} />
       <Route path="/pembayaran/:invoiceId" component={ProtectedPaymentPage} />
       <Route path="/sertifikat/:id" component={ProtectedCertificatePage} />
+      <Route path="/transaksi" component={ProtectedTransactionsPage} />
+      <Route path="/akun" component={ProtectedAccountPage} />
 
       {/* Admin — wajib login + admin */}
       <Route path="/admin/certificates" component={AdminCertificates} />

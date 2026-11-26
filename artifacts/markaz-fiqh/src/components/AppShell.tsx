@@ -14,8 +14,13 @@ import {
   X,
   Info,
   GraduationCap,
+  Receipt,
+  Home,
+  PlayCircle,
+  User as UserIcon,
   type LucideIcon,
 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -28,8 +33,64 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: '/pengajar', label: 'Pengajar', icon: GraduationCap },
   { href: '/my-classes', label: 'Kelas Saya', icon: BookMarked },
   { href: '/ebook-saya', label: 'Ebook Saya', icon: BookOpen },
+  { href: '/transaksi', label: 'Riwayat Transaksi', icon: Receipt },
   { href: '/tentang-kami', label: 'Tentang', icon: Info },
 ];
+
+// ── Navigasi bawah (mobile) ──────────────────────────────────────────────
+// Urutan sesuai permintaan: Beranda, Katalog, Belajar, Transaksi, Akun.
+const BOTTOM_NAV: { href: string; label: string; icon: LucideIcon; match: string[] }[] = [
+  { href: '/dashboard', label: 'Beranda', icon: Home, match: ['/dashboard'] },
+  { href: '/katalog', label: 'Katalog', icon: LayoutGrid, match: ['/katalog', '/kelas', '/class', '/paket-bundle'] },
+  { href: '/my-classes', label: 'Belajar', icon: PlayCircle, match: ['/my-classes', '/learn', '/belajar'] },
+  { href: '/transaksi', label: 'Transaksi', icon: Receipt, match: ['/transaksi', '/pembayaran', '/keranjang', '/checkout'] },
+  { href: '/akun', label: 'Akun', icon: UserIcon, match: ['/akun', '/ebook-saya', '/pengajar', '/tentang-kami'] },
+];
+
+function UserAvatar({ className = 'h-9 w-9', ring = 'ring-2 ring-white/20' }: { className?: string; ring?: string }) {
+  const { user } = useAuth();
+  const initial = user?.nickname?.[0]?.toUpperCase() ?? user?.name?.[0]?.toUpperCase() ?? 'U';
+  return (
+    <Avatar className={`${className} ${ring} shrink-0`}>
+      <AvatarImage src={user?.avatar_url || undefined} alt={user?.nickname ?? user?.name} className="object-cover" />
+      <AvatarFallback className="bg-white text-primary text-sm font-semibold">{initial}</AvatarFallback>
+    </Avatar>
+  );
+}
+
+function MobileBottomNav() {
+  const [location] = useLocation();
+  return (
+    <nav
+      aria-label="Navigasi utama"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-sm pb-[var(--sab)] shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
+    >
+      <div className="grid grid-cols-5 h-14">
+        {BOTTOM_NAV.map(({ href, label, icon: Icon, match }) => {
+          const isActive = match.some((m) => location === m || location.startsWith(m + '/'));
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={`flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors ${
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span
+                className={`flex items-center justify-center h-7 w-12 rounded-full transition-colors ${
+                  isActive ? 'bg-primary/10' : ''
+                }`}
+              >
+                <Icon className="h-[18px] w-[18px]" strokeWidth={isActive ? 2.4 : 2} />
+              </span>
+              {label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
 
 // ── Sidebar content (shared between desktop fixed sidebar & mobile drawer) ──
 function SidebarContent({
@@ -42,8 +103,6 @@ function SidebarContent({
   const [location] = useLocation();
   const { user, logout } = useAuth();
 
-  const initial =
-    user?.nickname?.[0]?.toUpperCase() ?? user?.name?.[0]?.toUpperCase() ?? 'U';
   const displayName = user?.nickname ?? user?.name ?? 'Pengguna';
 
   return (
@@ -97,13 +156,18 @@ function SidebarContent({
       {/* Pinned Bottom Account / Logout Box */}
       <div className="border-t border-white/20 p-3.5 shrink-0 bg-black/10">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-white text-primary flex items-center justify-center text-sm font-semibold shrink-0 ring-2 ring-white/20">
-            {initial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-            <p className="text-xs text-white/60 truncate">{user?.email}</p>
-          </div>
+          <Link
+            href="/akun"
+            onClick={onClose}
+            className="flex flex-1 min-w-0 items-center gap-3 rounded-md -m-1 p-1 hover:bg-white/10 transition-colors"
+            title="Atur foto & nama"
+          >
+            <UserAvatar />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{displayName}</p>
+              <p className="text-xs text-white/60 truncate">{user?.email}</p>
+            </div>
+          </Link>
           <motion.button
             onClick={() => { logout(); onClose?.(); }}
             className="shrink-0 p-2 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-friendly"
@@ -132,11 +196,13 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 // ── Shell ────────────────────────────────────────────────────────────────
 export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const isAdmin = Boolean(user && (user as { role?: string }).role === 'admin');
+  const isAdmin = Boolean(user?.isAdmin);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    // --bnav: tinggi navigasi bawah di mobile (0 di desktop). Dipakai elemen
+    // melayang lain (keranjang, WhatsApp, bar beli) supaya tidak tertutup.
+    <div className="min-h-screen bg-background [--bnav:calc(3.5rem+var(--sab))] lg:[--bnav:0px]">
       {/* Desktop sidebar */}
       <AppSidebar isAdmin={isAdmin} />
 
@@ -162,11 +228,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <BrandLogo variant="white" alt="Markaz Fiqih" className="h-7 w-auto shrink-0" />
         </Link>
 
-        {/* 3. Kanan: Ikon Notifikasi */}
-        <div className="flex items-center gap-1 shrink-0">
+        {/* 3. Kanan: Ikon Notifikasi + foto profil (buka halaman Akun) */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <div className="[&_svg]:text-white/80 [&_svg]:hover:text-white [&_button]:hover:bg-white/10">
             <NotificationBell />
           </div>
+          <Link href="/akun" aria-label="Akun saya">
+            <UserAvatar className="h-8 w-8" ring="ring-2 ring-white/40" />
+          </Link>
         </div>
       </div>
 
@@ -222,9 +291,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       {/* Main content — offset by top bar height on mobile, by sidebar width on desktop */}
-      <div className="lg:pl-[240px] pt-14 lg:pt-0 min-h-screen flex flex-col">
+      <div className="lg:pl-[240px] pt-14 lg:pt-0 pb-[var(--bnav)] min-h-screen flex flex-col">
         {children}
       </div>
+
+      <MobileBottomNav />
 
       <FloatingWhatsAppButton />
       {/* Floating cart bar — muncul di semua halaman internal saat keranjang ada isinya */}

@@ -20,9 +20,8 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useQuery } from '@tanstack/react-query';
-import { listClasses, listInstructors, listEnrollments, listClassRatings, getClassEnrollmentStats, getSettings, listEbooksCatalog, listMyEbooks } from '@/lib/db';
+import { listClasses, listInstructors, listEnrollments, getClassEnrollmentStats, getSettings, listEbooksCatalog, listMyEbooks } from '@/lib/db';
 import type { EbookCatalogItem } from '@/lib/db';
-import { StarRating } from '@/components/StarRating';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -152,14 +151,16 @@ export type ClassSummary = {
   totalDurationMinutes: number | null;
   displayOrder?: number | null;
   slug?: string;
+  salesStatus?: 'open' | 'paused' | 'withdrawn';
+  ownedCountDisplay?: number | null;
 };
 
 // Bullet checkmark row — reused inside ClassCard checklist
 function CheckItem({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-foreground/80">
-      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
-        <Check className="h-2.5 w-2.5" />
+    <div className="flex items-center gap-1.5 text-xs sm:text-[13px] text-foreground/80 min-w-0">
+      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0">
+        <Check className="h-2 w-2" />
       </span>
       <span className="truncate">{children}</span>
     </div>
@@ -170,17 +171,15 @@ export function ClassCard({
   cls,
   index,
   enrolledClassIds = new Set<string>(),
-  ratingsMap = {},
   enrollmentStatsMap = {},
 }: {
   cls: ClassSummary;
   index: number;
   enrolledClassIds?: Set<string>;
-  ratingsMap?: Record<string, { averageRating: number; totalReviews: number }>;
   enrollmentStatsMap?: Record<string, { enrolledCount: number; tag?: string }>;
 }) {
-  const classRating = ratingsMap[cls.id];
   const stat = enrollmentStatsMap[cls.id];
+  const isForSale = (cls.salesStatus ?? 'open') === 'open';
   const hasDiscount = cls.discountPrice != null;
   const durationLabel = formatDuration(cls.totalDurationMinutes);
   const { user } = useAuth();
@@ -191,6 +190,7 @@ export function ClassCard({
   const handleCartAction = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isForSale) return;
     if (!user) {
       setLocation(`/login?redirect=${encodeURIComponent('/katalog')}`);
       return;
@@ -250,39 +250,23 @@ export function ClassCard({
             )}
           </div>
 
-          {/* Content */}
-          <div className="flex flex-col flex-1 px-4 pt-4 pb-3 gap-2">
+          {/* Content — dibuat ringkas (Revisi Batch 2): tanpa rating, jarak rapat */}
+          <div className="flex flex-col flex-1 px-3 pt-3 pb-2.5 gap-1.5">
             {/* Title */}
-            <h4 className="text-base font-semibold text-foreground leading-snug line-clamp-2 min-h-[2.75rem] group-hover:text-primary transition-colors">
+            <h4 className="text-sm sm:text-[15px] font-semibold text-foreground leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-primary transition-colors">
               {cls.title}
             </h4>
 
-            {/* Rating */}
-            {classRating && classRating.totalReviews > 0 && (
-              <div className="flex items-center gap-1.5">
-                <StarRating rating={classRating.averageRating} size="sm" />
-                <span className="text-xs text-muted-foreground font-medium">
-                  {classRating.averageRating} ({classRating.totalReviews})
-                </span>
-              </div>
-            )}
-
-            {/* Separator */}
-            <div className="border-t border-border" />
-
             {/* Checkmark detail list
                 • moduleCount > 0  → modul-based: tampilkan modul + durasi (jika > 0)
-                • meetingCount > 0 → playlist: tampilkan pertemuan + "Akses Selamanya"
+                • meetingCount > 0 → playlist: tampilkan jumlah pertemuan
                 • keduanya 0/null  → tampilkan pengajar saja, sembunyikan baris kosong
             */}
-            {/* Checkmark detail list */}
-            <div className="flex flex-col gap-1.5">
-              {/* Baris 1: Pengajar — selalu tampil */}
+            <div className="flex flex-col gap-1 pt-1.5 border-t border-border">
               <CheckItem>{cls.instructor.name}</CheckItem>
 
               {cls.moduleCount > 0 ? (
                 <>
-                  {/* Kelas berbasis modul/dars */}
                   <CheckItem>{cls.moduleCount} Modul</CheckItem>
                   {(cls.totalDurationMinutes ?? 0) > 0 && (
                     <CheckItem>{durationLabel}</CheckItem>
@@ -293,30 +277,29 @@ export function ClassCard({
               ) : null}
             </div>
 
-            {/* Social Proof: Real-time Participant Count */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border mt-auto">
-              <span className="flex items-center gap-1.5 font-medium text-foreground/80">
+            {/* Jumlah pemilik — angka diatur manual per kelas di Admin Panel */}
+            {cls.ownedCountDisplay != null && cls.ownedCountDisplay > 0 && (
+              <div className="flex items-center gap-1.5 text-xs text-foreground/80 font-medium whitespace-nowrap overflow-hidden">
                 <Users className="w-3.5 h-3.5 text-primary shrink-0" />
-                {stat?.enrolledCount ? `Dimiliki ${stat.enrolledCount} Pelajar` : 'Baru Rilis'}
-              </span>
-              <span className="text-[11px] text-muted-foreground">Akses Selamanya</span>
-            </div>
+                <span className="truncate">Dimiliki {cls.ownedCountDisplay} Pelajar</span>
+              </div>
+            )}
 
             {/* Price */}
-            <div className="mt-auto pt-2">
+            <div className="mt-auto pt-1.5 border-t border-border">
               {hasDiscount ? (
                 <>
-                  <span className="text-[13px] text-text-tertiary line-through leading-tight block">
+                  <span className="text-[11px] text-text-tertiary line-through leading-tight block">
                     {formatPrice(cls.basePrice)}
                   </span>
-                  <span className="text-lg font-bold text-primary leading-tight">
+                  <span className="text-base font-bold text-primary leading-tight">
                     {formatPrice(cls.discountPrice!)}
                   </span>
                 </>
               ) : (
                 <>
-                  <span className="text-[13px] leading-tight invisible select-none block">&nbsp;</span>
-                  <span className="text-lg font-bold text-foreground leading-tight">
+                  <span className="text-[11px] leading-tight invisible select-none block">&nbsp;</span>
+                  <span className="text-base font-bold text-foreground leading-tight">
                     {formatPrice(cls.basePrice)}
                   </span>
                 </>
@@ -330,12 +313,16 @@ export function ClassCard({
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.15 }}>
             <Link
               href={`/learn/${cls.id}`}
-              className="w-full py-3 px-4 bg-[hsl(var(--accent))] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[hsl(var(--brand-gold-hover))] transition-colors"
+              className="w-full py-2.5 px-3 bg-[hsl(var(--accent))] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[hsl(var(--brand-gold-hover))] transition-colors"
             >
               Lanjutkan Belajar
               <ArrowRight className="h-4 w-4 shrink-0" />
             </Link>
           </motion.div>
+        ) : !isForSale ? (
+          <div className="w-full py-2.5 px-3 bg-muted text-muted-foreground text-xs sm:text-sm font-semibold text-center">
+            Tidak Dijual Sementara
+          </div>
         ) : (
           <motion.button
             onClick={handleCartAction}
@@ -343,7 +330,7 @@ export function ClassCard({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="w-full py-3 px-4 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60"
+            className="w-full py-2.5 px-3 bg-gradient-to-r from-primary to-[hsl(var(--brand-red-hover))] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60"
           >
             {inCart ? 'Lihat di Keranjang' : 'Tambah ke Keranjang'}
             <ArrowRight className="h-4 w-4 shrink-0" />
@@ -583,21 +570,19 @@ function CategorySection({
   category,
   classes,
   enrolledClassIds,
-  ratingsMap,
   enrollmentStatsMap,
 }: {
   category: string;
   classes: ClassSummary[];
   enrolledClassIds: Set<string>;
-  ratingsMap: Record<string, { averageRating: number; totalReviews: number }>;
   enrollmentStatsMap?: Record<string, { enrolledCount: number; tag?: string }>;
 }) {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-foreground">{category}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
         {classes.map((cls, idx) => (
-          <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} ratingsMap={ratingsMap} enrollmentStatsMap={enrollmentStatsMap} />
+          <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} enrollmentStatsMap={enrollmentStatsMap} />
         ))}
       </div>
     </div>
@@ -672,12 +657,6 @@ function CatalogContent() {
     queryFn: listInstructors,
   });
 
-  const ratingsQuery = useQuery({
-    queryKey: ['class-ratings'],
-    queryFn: listClassRatings,
-    staleTime: 5 * 60 * 1000,
-  });
-  const ratingsMap = ratingsQuery.data ?? {};
 
   const enrollmentStatsQuery = useQuery({
     queryKey: ['class-enrollment-stats'],
@@ -836,7 +815,7 @@ function CatalogContent() {
           >
             <h2 className="text-xl font-semibold text-foreground mb-4">Semua Ebook</h2>
             {ebooksQuery.isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                 {Array.from({ length: 4 }).map((_, i) => <ClassCardSkeleton key={i} />)}
               </div>
             ) : ebookList.length === 0 ? (
@@ -856,7 +835,7 @@ function CatalogContent() {
                 )}
               </motion.div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                 {ebookList.map((ebook, idx) => (
                   <EbookCard key={ebook.id} ebook={ebook} index={idx} ownedEbookIds={ownedEbookIds} />
                 ))}
@@ -876,7 +855,7 @@ function CatalogContent() {
           {isLoading ? (
             <>
               <h2 className="text-xl font-semibold text-foreground mb-4">Semua Kelas</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
                 {Array.from({ length: 8 }).map((_, i) => <ClassCardSkeleton key={i} />)}
               </div>
             </>
@@ -895,7 +874,7 @@ function CatalogContent() {
                   category={cat}
                   classes={catClasses}
                   enrolledClassIds={enrolledClassIds}
-                  ratingsMap={ratingsMap}
+                 
                   enrollmentStatsMap={enrollmentStatsMap}
                 />
               ))}
@@ -906,10 +885,10 @@ function CatalogContent() {
               <AnimatePresence mode="popLayout">
                 <motion.div
                   layout
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+                  className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4"
                 >
                   {sortedClasses.map((cls, idx) => (
-                    <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} ratingsMap={ratingsMap} enrollmentStatsMap={enrollmentStatsMap} />
+                    <ClassCard key={cls.id} cls={cls} index={idx} enrolledClassIds={enrolledClassIds} enrollmentStatsMap={enrollmentStatsMap} />
                   ))}
                 </motion.div>
               </AnimatePresence>

@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { FORMAT_HINT } from '@/components/FormattedText';
 import {
   Table,
   TableBody,
@@ -426,6 +427,10 @@ type ClassFormState = {
   displayOrder: string;
   reverseVideoOrder: boolean;
   certificateTemplateUrl: string;
+  salesStatus: 'open' | 'paused' | 'withdrawn';
+  ownedCountDisplay: string;
+  aboutText: string;
+  notesText: string;
 };
 
 const EMPTY_FORM: ClassFormState = {
@@ -448,6 +453,10 @@ const EMPTY_FORM: ClassFormState = {
   displayOrder: '0',
   reverseVideoOrder: false,
   certificateTemplateUrl: '',
+  salesStatus: 'open',
+  ownedCountDisplay: '',
+  aboutText: '',
+  notesText: '',
 };
 
 function classToForm(cls: ClassDetail): ClassFormState {
@@ -471,6 +480,10 @@ function classToForm(cls: ClassDetail): ClassFormState {
     displayOrder: String(cls.displayOrder ?? 0),
     reverseVideoOrder: cls.reverseVideoOrder ?? false,
     certificateTemplateUrl: cls.certificateTemplateUrl ?? '',
+    salesStatus: cls.salesStatus ?? 'open',
+    ownedCountDisplay: cls.ownedCountDisplay != null ? String(cls.ownedCountDisplay) : '',
+    aboutText: cls.aboutText ?? '',
+    notesText: cls.notesText ?? '',
   };
 }
 
@@ -1221,6 +1234,10 @@ export default function AdminClassesPage() {
       displayOrder: String(cls.displayOrder ?? 0),
       reverseVideoOrder: false,
       certificateTemplateUrl: cls.certificateTemplateUrl ?? '',
+      salesStatus: cls.salesStatus ?? 'open',
+      ownedCountDisplay: cls.ownedCountDisplay != null ? String(cls.ownedCountDisplay) : '',
+      aboutText: cls.aboutText ?? '',
+      notesText: cls.notesText ?? '',
     });
     setDialogOpen(true);
   }
@@ -1255,6 +1272,10 @@ export default function AdminClassesPage() {
       displayOrder: form.displayOrder ? parseInt(form.displayOrder, 10) : 0,
       reverseVideoOrder: form.reverseVideoOrder,
       certificateTemplateUrl: form.certificateTemplateUrl.trim() || null,
+      salesStatus: form.salesStatus,
+      ownedCountDisplay: form.ownedCountDisplay.trim() ? Math.max(0, parseInt(form.ownedCountDisplay, 10) || 0) : null,
+      aboutText: form.aboutText.trim() || null,
+      notesText: form.notesText.trim() || null,
     };
 
     if (editingClass) {
@@ -1380,6 +1401,16 @@ export default function AdminClassesPage() {
                         >
                           {cls.status === 'published' ? 'Published' : 'Draft'}
                         </Badge>
+                        {cls.salesStatus === 'paused' && (
+                          <Badge variant="outline" className="ml-1 mt-1 text-[10px] border-amber-400 text-amber-700">
+                            Tidak dijual sementara
+                          </Badge>
+                        )}
+                        {cls.salesStatus === 'withdrawn' && (
+                          <Badge variant="outline" className="ml-1 mt-1 text-[10px] border-destructive/50 text-destructive">
+                            Ditarik dari penjualan
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -1570,6 +1601,65 @@ export default function AdminClassesPage() {
                 <p className="text-xs text-muted-foreground">
                   Menentukan posisi kelas dalam daftar (angka lebih kecil tampil lebih dulu). Kelas dengan kategori sama diurutkan berdasarkan angka ini.
                 </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Status Penjualan</Label>
+                <Select
+                  value={form.salesStatus}
+                  onValueChange={(v) => setForm((p) => ({ ...p, salesStatus: v as ClassFormState['salesStatus'] }))}
+                >
+                  <SelectTrigger data-testid="select-class-sales-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Dijual</SelectItem>
+                    <SelectItem value="paused">Tidak dijual sementara (tetap tampil di katalog)</SelectItem>
+                    <SelectItem value="withdrawn">Tarik dari penjualan (hilang dari katalog)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Pelajar yang sudah membeli tetap memiliki kelas ini di "Kelas Saya" apa pun pilihannya.
+                  Berbeda dengan status Draft, yang menyembunyikan kelas dari semua orang termasuk pembeli.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="class-owned-count">Angka "Dimiliki ... Pelajar"</Label>
+                <Input
+                  id="class-owned-count"
+                  type="number"
+                  min={0}
+                  placeholder="Kosongkan untuk menyembunyikan"
+                  value={form.ownedCountDisplay}
+                  onChange={(e) => setForm((p) => ({ ...p, ownedCountDisplay: e.target.value }))}
+                  data-testid="input-class-owned-count"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ditampilkan di kartu katalog dan halaman detail kelas. Diisi manual, tidak dihitung otomatis.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="class-about-text">Tentang Kelas</Label>
+                <Textarea
+                  id="class-about-text"
+                  rows={6}
+                  placeholder="Penjelasan kelas yang tampil di halaman detail kelas (katalog)."
+                  value={form.aboutText}
+                  onChange={(e) => setForm((p) => ({ ...p, aboutText: e.target.value }))}
+                  data-testid="input-class-about-text"
+                />
+                <p className="text-xs text-muted-foreground">{FORMAT_HINT}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="class-notes-text">Catatan (untuk pelajar yang sudah membeli)</Label>
+                <Textarea
+                  id="class-notes-text"
+                  rows={4}
+                  placeholder="Informasi penting seputar kelas. Tampil di halaman belajar, di atas Tentang Pengajar."
+                  value={form.notesText}
+                  onChange={(e) => setForm((p) => ({ ...p, notesText: e.target.value }))}
+                  data-testid="input-class-notes-text"
+                />
+                <p className="text-xs text-muted-foreground">Kosongkan untuk menyembunyikan box Catatan. {FORMAT_HINT}</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="class-youtube-playlist">Link Playlist YouTube</Label>

@@ -305,17 +305,32 @@ function DashboardContent() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
+  const enrollmentsCacheKey = user?.id ? `mf_enrollments_v1_${user.id}` : null;
   const { data: enrollments = [], isLoading } = useQuery({
     queryKey: ['enrollments', user?.id],
     queryFn: () => listEnrollments(user!.id),
     enabled: !!user?.id,
+    // Tampilkan data kelas terakhir dari cache browser dulu (instan), lalu
+    // diperbarui otomatis begitu data terbaru selesai dimuat.
+    placeholderData: () => {
+      if (!enrollmentsCacheKey) return undefined;
+      try {
+        const raw = localStorage.getItem(enrollmentsCacheKey);
+        return raw ? (JSON.parse(raw) as EnrollmentItem[]) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
   });
+
+  useEffect(() => {
+    if (!enrollmentsCacheKey || isLoading) return;
+    try {
+      localStorage.setItem(enrollmentsCacheKey, JSON.stringify(enrollments));
+    } catch {
+      /* abaikan (mis. storage penuh) */
+    }
+  }, [enrollments, enrollmentsCacheKey, isLoading]);
 
   const { data: dashboardMessages = [] } = useQuery({
     queryKey: ['dashboard-messages'],
@@ -359,8 +374,7 @@ function DashboardContent() {
             <p className="text-muted-foreground mt-1 text-xs sm:text-sm">{motivasi}</p>
           </div>
           <div className="hidden sm:flex flex-col items-end gap-0.5 shrink-0 pt-0.5 pr-12 lg:pr-14">
-            <p className="text-xs text-muted-foreground">{formatTanggal(now)}</p>
-            <p className="text-lg font-semibold tabular-nums text-foreground">{formatJam(now)}</p>
+            <LiveClock />
           </div>
         </motion.div>
       </div>
@@ -459,6 +473,22 @@ function DashboardContent() {
         © 2026 Markaz Fiqh. Semua Hak Dilindungi.
       </footer>
     </AppShell>
+  );
+}
+
+// Jam berjalan dipisah ke komponen sendiri: hanya bagian ini yang dirender
+// ulang tiap detik, bukan seluruh halaman Dashboard.
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <>
+      <p className="text-xs text-muted-foreground">{formatTanggal(now)}</p>
+      <p className="text-lg font-semibold tabular-nums text-foreground">{formatJam(now)}</p>
+    </>
   );
 }
 
